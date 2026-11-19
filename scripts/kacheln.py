@@ -21,6 +21,7 @@ SITE_URL = "https://ratsatlas.de/"
 
 STATUS = {
     "online": ("Online", "status-online"),
+    "im Aufbau": ("Bestand im Aufbau", "status-vorbereitung"),
     "in Vorbereitung": ("Im Aufbau", "status-vorbereitung"),
 }
 PFLICHT = ("id", "titel", "url", "adresse", "beschreibung", "quelle", "status")
@@ -118,6 +119,31 @@ def aufbau(s, einzug):
     return "\n".join(einzug + z for z in zeilen)
 
 
+def aufbau_online(s, einzug):
+    """Stadt „im Aufbau“: erreichbar, der Datenbestand wächst noch. Kleinere Kachel wie „in Vorbereitung“, aber mit
+    Bildschirmfoto, Chip „Bestand im Aufbau“ und Knopf (einziger Link, deckt die Kachel ab)."""
+    e = html.escape
+    status_text, status_klasse = STATUS[s["status"]]
+    kopf = (f'<img src="{e(s["bild"])}" width="1200" height="630" alt="">' if s.get("bild")
+            else '<img class="kachel-symbol" src="favicon.svg" width="56" height="56" alt="">')
+    zeilen = [
+        '<li class="kachel kachel-aufbau glass kachel-link">',
+        f'  <div class="kachel-kopf">{kopf}</div>',
+        '  <div class="kachel-inhalt">',
+        f'    <div class="kachel-titelzeile"><h3>{e(s["titel"])}</h3> <span class="status {status_klasse}">{status_text}</span></div>',
+        f'    <p class="kachel-text">{e(s["beschreibung"])}</p>',
+        '    <dl class="kachel-angaben">',
+        f'      <dt>Adresse</dt><dd>{e(s["adresse"])}</dd>',
+        f'      <dt>Datenquelle</dt><dd>{e(s["quelle"])}</dd>',
+        '    </dl>',
+        f'    <p class="kachel-aktion"><a class="knopf kachel-knopf" href="{e(s["url"])}">{e(s["titel"])} öffnen'
+        '<span class="knopf-pfeil" aria-hidden="true">→</span></a></p>',
+        '  </div>',
+        '</li>',
+    ]
+    return "\n".join(einzug + z for z in zeilen)
+
+
 def kacheln_html(staedte, einzug):
     online = [s for s in staedte if s["status"] == "online"]
     spaeter = [s for s in staedte if s["status"] != "online"]
@@ -128,7 +154,7 @@ def kacheln_html(staedte, einzug):
         teile.append(einzug + "</ul>")
     if spaeter:
         teile.append(einzug + '<ul class="kacheln kacheln-aufbau">')
-        teile += [aufbau(s, einzug + "  ") for s in spaeter]
+        teile += [(aufbau_online if s["status"] == "im Aufbau" else aufbau)(s, einzug + "  ") for s in spaeter]
         teile.append(einzug + "</ul>")
     return "\n".join(teile)
 

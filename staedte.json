@@ -1,5 +1,5 @@
 {
-  "hinweis": "Städteliste der Startseite. scripts/kacheln.py schreibt daraus die Kacheln in site/index.html. status: \"online\" (Kachel mit Knopf) oder \"in Vorbereitung\" (schmale Zeile ohne Link). bild: Pfad relativ zu site/ oder null. themen: optionale Liste {titel, url} mit Themenseiten der Instanz; themen_alle: Adresse der Übersicht aller Themen.",
+  "hinweis": "Städteliste der Startseite. scripts/kacheln.py schreibt daraus die Kacheln in site/index.html. status: \"online\" (große Kachel mit Knopf), \"im Aufbau\" (erreichbar, Datenbestand wächst noch: kleinere Kachel mit Bild, Chip „Bestand im Aufbau“ und Knopf) oder \"in Vorbereitung\" (kleinere Kachel ohne Link, Banderole „Im Aufbau“). bild: Pfad relativ zu site/ oder null. themen: optionale Liste {titel, url} mit Themenseiten der Instanz; themen_alle: Adresse der Übersicht aller Themen.",
   "staedte": [
     {
       "id": "bonn",
@@ -42,8 +42,8 @@
       "adresse": "koeln.ratsatlas.de",
       "beschreibung": "Vorlagen aus dem Ratsinformationssystem der Stadt Köln auf Karte und Zeitleiste",
       "quelle": "OParl-Schnittstelle der Stadt Köln",
-      "status": "in Vorbereitung",
-      "bild": null,
+      "status": "im Aufbau",
+      "bild": "vorschau/koeln.jpg",
       "repository": null
     },
     {
@@ -53,8 +53,8 @@
       "adresse": "wuppertal.ratsatlas.de",
       "beschreibung": "Vorlagen aus dem Ratsinformationssystem der Stadt Wuppertal auf Karte und Zeitleiste",
       "quelle": "OParl-Schnittstelle der Stadt Wuppertal",
-      "status": "in Vorbereitung",
-      "bild": null,
+      "status": "im Aufbau",
+      "bild": "vorschau/wuppertal.jpg",
       "repository": "https://github.com/daimpad/ratsatlas-wuppertal"
     }
   ]
