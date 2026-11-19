@@ -67,7 +67,7 @@ Maßsystem in `tokens.css`: Schriftskala mit sieben Stufen (`--text-xs` bis `--t
 - `in Vorbereitung` → kleinere Kachel ohne Link, ab 720 px je halbe Breite, mit der Banderole „Im Aufbau“ oben rechts; die Banderole ist Text hinter der Überschrift (Vorleseprogramme lesen erst den Namen, dann den Status), Kontrast weiß auf `--warn` 5,9:1
 - JSON-LD `WebSite` mit `hasPart` nur für Städte mit Status `online`
 
-`python3 scripts/kacheln.py --pruefen` endet mit Fehlercode 1, wenn das HTML nicht zur Liste passt.
+`python3 scripts/kacheln.py --pruefen` endet mit Fehlercode 1, wenn das HTML nicht zur Liste passt. Es prüft außerdem in `index.html`, `datenschutz.html` und `404.html`, dass Links auf andere Seiten (andere Domains und Stadt-Subdomains) mit `target="_blank" rel="noopener"` in einem neuen Tab öffnen; Sprunglinks, eigene Seiten von ratsatlas.de und `mailto:` bleiben im selben Tab.
 
 ## Sicherheit und Datenschutz
 

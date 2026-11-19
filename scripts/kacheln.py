@@ -25,6 +25,20 @@ STATUS = {
     "in Vorbereitung": ("Im Aufbau", "status-vorbereitung"),
 }
 PFLICHT = ("id", "titel", "url", "adresse", "beschreibung", "quelle", "status")
+# Links auf andere Seiten (andere Domains, Stadt-Subdomains) öffnen in einem neuen Tab (Entscheidung 19.11.2026);
+# Sprunglinks, eigene Seiten von ratsatlas.de und mailto: bleiben im selben Tab
+NEUER_TAB = ' target="_blank" rel="noopener"'
+SEITEN = ("index.html", "datenschutz.html", "404.html")
+
+
+def links_ohne_neuen_tab(text):
+    """Links auf andere Seiten ohne target="_blank" (Liste der Adressen)."""
+    fehlend = []
+    for a in re.findall(r"<a\b[^>]*>", text):
+        m = re.search(r'href="(https?://[^"]+)"', a)
+        if m and not m.group(1).startswith(SITE_URL) and 'target="_blank"' not in a:
+            fehlend.append(m.group(1))
+    return fehlend
 
 
 def laden():
@@ -59,9 +73,9 @@ def themen_html(s):
     themen = s.get("themen") or []
     if not themen:
         return []
-    links = [f'<li><a href="{e(t["url"])}">{e(t["titel"])}</a></li>' for t in themen]
+    links = [f'<li><a href="{e(t["url"])}"{NEUER_TAB}>{e(t["titel"])}</a></li>' for t in themen]
     if s.get("themen_alle"):
-        links.append(f'<li><a href="{e(s["themen_alle"])}">Alle Themen</a></li>')
+        links.append(f'<li><a href="{e(s["themen_alle"])}"{NEUER_TAB}>Alle Themen</a></li>')
     return [f'    <p class="kachel-themen-titel" id="themen-{e(s["id"])}">Themenseiten</p>',
             f'    <ul class="kachel-themen" aria-labelledby="themen-{e(s["id"])}">',
             *[f'      {l}' for l in links],
@@ -89,7 +103,7 @@ def kachel(s, einzug):
         f'      <dt>Datenquelle</dt><dd>{e(s["quelle"])}</dd>',
         f'      <dt>Status</dt><dd><span class="status {status_klasse}">{status_text}</span></dd>',
         '    </dl>',
-        f'    <p class="kachel-aktion"><a class="knopf kachel-knopf" href="{e(s["url"])}">{e(s["titel"])} öffnen'
+        f'    <p class="kachel-aktion"><a class="knopf kachel-knopf" href="{e(s["url"])}"{NEUER_TAB}>{e(s["titel"])} öffnen'
         '<span class="knopf-pfeil" aria-hidden="true">→</span></a></p>',
         '  </div>',
         '</li>',
@@ -136,7 +150,7 @@ def aufbau_online(s, einzug):
         f'      <dt>Adresse</dt><dd>{e(s["adresse"])}</dd>',
         f'      <dt>Datenquelle</dt><dd>{e(s["quelle"])}</dd>',
         '    </dl>',
-        f'    <p class="kachel-aktion"><a class="knopf kachel-knopf" href="{e(s["url"])}">{e(s["titel"])} öffnen'
+        f'    <p class="kachel-aktion"><a class="knopf kachel-knopf" href="{e(s["url"])}"{NEUER_TAB}>{e(s["titel"])} öffnen'
         '<span class="knopf-pfeil" aria-hidden="true">→</span></a></p>',
         '  </div>',
         '</li>',
@@ -204,6 +218,10 @@ def main():
     neu = ersetzen(alt, "kacheln", lambda e: kacheln_html(staedte, e))
     neu = ersetzen(neu, "jsonld", lambda e: jsonld_html(staedte, e))
     if pruefen:
+        fehlend = [f"{s}: {u}" for s in SEITEN for u in links_ohne_neuen_tab(
+            neu if s == "index.html" else (WURZEL / "site" / s).read_text(encoding="utf-8"))]
+        if fehlend:
+            sys.exit("Links auf andere Seiten ohne neuen Tab:\n  " + "\n  ".join(fehlend))
         if neu != alt:
             sys.exit("site/index.html ist nicht auf dem Stand von staedte.json – bitte scripts/kacheln.py ausführen")
         print("ok  site/index.html entspricht staedte.json")
