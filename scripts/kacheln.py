@@ -168,7 +168,7 @@ def jsonld_html(staedte, einzug):
         "inLanguage": "de",
         "description": "Der Ratsatlas erschließt öffentliche Vorlagen aus kommunalen Ratsinformationssystemen "
                        "räumlich, zeitlich und nach beteiligten Gremien und Ämtern.",
-        "publisher": {"@type": "Person", "name": "Damian Paderta"},
+        "publisher": {"@type": "Person", "name": "Damian Paderta", "url": "https://paderta.com/"},
         "sponsor": {"@type": "Organization", "name": "Offene Kommunen.NRW", "url": "https://oknrw.de/"},
         "about": ["Kommunalpolitik", "Ratsinformationssystem", "Transparenz", "Bürgerbeteiligung"],
         "isAccessibleForFree": True,
