@@ -63,6 +63,7 @@ Maßsystem in `tokens.css`: Schriftskala mit sieben Stufen (`--text-xs` bis `--t
 `scripts/kacheln.py` (nur Standardbibliothek) liest `staedte.json`, prüft Pflichtfelder, Status, `https`-Adresse und vorhandene Bilder und ersetzt in `site/index.html` den Inhalt zwischen den Markierungen `kacheln:anfang/ende` und `jsonld:anfang/ende`.
 
 - `online` → Kachel mit Bild, Angaben und Knopf „<Titel> öffnen“; der Knopf ist der einzige Link und deckt die ganze Kachel ab (`.kachel-knopf::after`)
+- `im Aufbau` → Instanz erreichbar, Datenbestand wächst noch: kleinere Kachel wie bei `in Vorbereitung`, aber mit Bildschirmfoto der Instanz (`site/vorschau/<id>.jpg`, 1200 × 630, aus 1440 × 756 px verkleinert), Chip „Bestand im Aufbau“ neben dem Titel und Knopf „<Titel> öffnen“, der die ganze Kachel abdeckt; nicht in `hasPart` des JSON-LD
 - `in Vorbereitung` → kleinere Kachel ohne Link, ab 720 px je halbe Breite, mit der Banderole „Im Aufbau“ oben rechts; die Banderole ist Text hinter der Überschrift (Vorleseprogramme lesen erst den Namen, dann den Status), Kontrast weiß auf `--warn` 5,9:1
 - JSON-LD `WebSite` mit `hasPart` nur für Städte mit Status `online`
 
