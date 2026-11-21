@@ -50,6 +50,48 @@ async function capture(name) {
   await page.screenshot({path:resolve(output, name+'.png'), fullPage:false, animations:'disabled'});
   report.screenshots.push(name+'.png');
 }
+async function grayscaleBasemap() {
+  // This patch of the desktop map is clear of district fills, labels and controls.
+  const clip={x:20,y:90,width:180,height:100};
+  await page.waitForFunction(({x,y,width,height})=>{
+    const cx=x+width/2, cy=y+height/2;
+    return [...document.querySelectorAll('#map img.leaflet-tile-loaded')].some(tile=>{
+      const bounds=tile.getBoundingClientRect();
+      return tile.naturalWidth>0 && bounds.left<=cx && cx<=bounds.right && bounds.top<=cy && cy<=bounds.bottom;
+    });
+  },clip);
+  const png=await page.screenshot({clip,animations:'disabled'});
+  const coloredFraction=await page.evaluate(async encoded=>{
+    const image=new Image();
+    image.src='data:image/png;base64,'+encoded;
+    await image.decode();
+    const canvas=document.createElement('canvas');
+    canvas.width=image.naturalWidth; canvas.height=image.naturalHeight;
+    const ctx=canvas.getContext('2d');
+    ctx.drawImage(image,0,0);
+    const pixels=ctx.getImageData(0,0,canvas.width,canvas.height).data;
+    let colored=0;
+    for(let i=0;i<pixels.length;i+=4) {
+      const r=pixels[i], g=pixels[i+1], b=pixels[i+2];
+      if (Math.max(r,g,b)-Math.min(r,g,b)>12) colored++;
+    }
+    return colored/(canvas.width*canvas.height);
+  },png.toString('base64'));
+  report.grayscaleSample={clip,coloredFraction};
+  assert.ok(coloredFraction<0.005,`painted basemap contains ${(coloredFraction*100).toFixed(2)}% colored pixels`);
+  report.assertions.push('Rendered desktop basemap pixels are grayscale in the unobstructed tile sample');
+}
+async function mobileAttribution() {
+  const attribution=page.locator('#map .leaflet-control-attribution');
+  for (const name of [/Ratsatlas Bonn/,'Datenschutz']) {
+    assert.ok(await attribution.getByRole('link',{name}).isVisible(),`missing visible mobile attribution link: ${name}`);
+  }
+  const [credits,status,nav]=await Promise.all([attribution,page.locator('.map-info'),page.locator('nav.nav')].map(locator=>locator.boundingBox()));
+  assert.ok(credits?.height&&status?.height&&nav?.height,'mobile attribution, map status and navigation must be visible');
+  assert.ok(status.y+status.height<=credits.y,'map status overlaps mobile attribution');
+  assert.ok(credits.y+credits.height<=nav.y,'mobile navigation overlaps attribution');
+  report.assertions.push('Mobile attribution includes Bonn and privacy links between the map status and navigation');
+}
 async function hits(count) {
   await page.waitForFunction(expected => {
     const text = document.getElementById('count')?.textContent || '';
@@ -185,13 +227,14 @@ try {
   const districts='path[data-area-id^="bezirk:"]';
   const neighborhoods='path[data-area-id^="stadtteil:"]';
   await pathCount(districts,13);
-  assert.match(await page.locator('#map .leaflet-tile-pane').evaluate(el=>getComputedStyle(el).filter),/grayscale/);
+  assert.match(await page.locator('#map img.leaflet-tile').first().evaluate(img=>getComputedStyle(img).filter),/grayscale/);
   assert.equal(await page.locator('#map .leaflet-overlay-pane canvas').count(),0,'the overview draws all original streets at once');
   const mapBox=await page.locator('#map').boundingBox();
   assert.equal(mapBox.x,0); assert.equal(mapBox.y,0);
   assert.equal(mapBox.width,1440); assert.equal(mapBox.height,1000);
   assert.equal(await page.locator('link[href="app.css"]').count(),0);
   await overflow(); await capture('desktop');
+  await grayscaleBasemap();
   report.assertions.push(`Bonn fullviewport layout, gray map with 13 districts, ${totals.recordCount} records and ${totals.geometryCount} supplied geometries`);
 
   const areaSelect=page.locator('#f-area');
@@ -431,6 +474,7 @@ try {
   await showSheet('panel-list'); await overflow(); await capture('mobile-list');
   await showSheet();
   await overflow(); await capture('mobile-map');
+  await mobileAttribution();
   await showSheet('timeline-wrap');
   await overflow(); await capture('mobile-timeline');
   const phoneViews=await Promise.all(['mobile-list','mobile-map','mobile-timeline'].map(name=>readFile(resolve(output,name+'.png'))));
@@ -453,7 +497,7 @@ try {
   assert.deepEqual(report.requestFailures.filter(r=>r.url.startsWith(url)&&!/ERR_ABORTED|cancelled|canceled|Aborted/i.test(String(r.error))),[]);
   assert.deepEqual([...runtimeRequests.keys()].sort(),[...runtimeAssets].sort(),'runtime asset coverage');
   const releases=new Set([...runtimeRequests.values()].flatMap(values=>[...values]));
-  assert.deepEqual([...releases],['kartenorte-20261121-2'],'runtime files must use the same current cache version');
+  assert.deepEqual([...releases],['kartenorte-20261121-3'],'runtime files must use the same current cache version');
   report.assertions.push('Browser and search worker load one consistently versioned runtime, independent of old unversioned cache entries');
 } catch(error) {
   report.failure=error.message;

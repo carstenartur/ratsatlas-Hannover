@@ -11,8 +11,8 @@
   <link rel="canonical" href="https://carstenartur.github.io/ratsatlas-Hannover/">
   <link rel="icon" href="favicon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="manifest" href="site.webmanifest">
   <link rel="preload" href="fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="tokens.css"><link rel="stylesheet" href="vendor/leaflet/leaflet.css"><link rel="stylesheet" href="style.css?v=kartenorte-20261121-2"><link rel="stylesheet" href="hannover.css?v=kartenorte-20261121-2">
-  <script src="vendor/leaflet/leaflet.js" defer></script><script type="module" src="app.js?v=kartenorte-20261121-2"></script>
+  <link rel="stylesheet" href="tokens.css"><link rel="stylesheet" href="vendor/leaflet/leaflet.css"><link rel="stylesheet" href="style.css?v=kartenorte-20261121-3"><link rel="stylesheet" href="hannover.css?v=kartenorte-20261121-3">
+  <script src="vendor/leaflet/leaflet.js" defer></script><script type="module" src="app.js?v=kartenorte-20261121-3"></script>
 </head>
 <body class="list-closed detail-open">
   <!-- Map, navigation and sheet structure derived from Ratsatlas Bonn
@@ -72,7 +72,6 @@
   </main>
   <div class="map-info glass" aria-label="Kartenstatus"><span id="map-count" role="status">Orte werden geladen …</span><button type="button" class="link-btn" data-open-status>Datenstand</button></div>
   <div id="geography-status" class="geography-status glass" role="status" hidden></div>
-  <footer class="source-footer"><a href="https://bonn.ratsatlas.de/" target="_blank" rel="noopener">Auf Basis von Ratsatlas Bonn</a><span> · </span><a href="datenschutz.html">Datenschutz</a></footer>
   <div class="visually-hidden" id="announce" role="status" aria-live="polite"></div>
   <dialog id="status" class="info-dialog glass" aria-labelledby="status-title"><div class="dialog-head"><h2 id="status-title">Datenstand und Quellen</h2><button type="button" class="icon-btn" id="status-close" aria-label="Datenstand schließen"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button></div><div id="status-body"><p>Daten werden geladen …</p></div></dialog>
   <dialog id="share-dialog" class="info-dialog glass" aria-labelledby="share-title"><div class="dialog-head"><h2 id="share-title">Ansicht teilen</h2><button type="button" class="icon-btn" id="share-close" aria-label="Teilen schließen"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button></div><div class="share-inner"><p>Der Link enthält die Suche, Quellen, Zeitgrenzen, Kartenposition, offenen Fenster und den ausgewählten Vorgang.</p><label for="share-url">Link zur aktuellen Ansicht</label><input id="share-url" readonly><button type="button" id="copy" class="btn btn-primary">Link kopieren</button><p id="copy-status" role="status"></p></div></dialog>

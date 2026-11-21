@@ -189,7 +189,7 @@ eingerichtet sein. Einen erfolgreichen Lauf und die tatsächlich erreichbare
 Adresse vor einer Bekanntgabe kontrollieren.
 
 Anwendungsdateien werden mit einer gemeinsamen Versionskennung in ihren URLs
-geladen (derzeit `v=kartenorte-20261121-2`). Bei Änderungen an JavaScript oder den
+geladen (derzeit `v=kartenorte-20261121-3`). Bei Änderungen an JavaScript oder den
 Anwendungsstylesheets diese Kennung in `index.html` und der gesamten
 Import-/Worker-Kette erneuern. Relative Modulimporte übernehmen den
 Versionsparameter ihres Elternmoduls nicht automatisch. Die Browserprüfung

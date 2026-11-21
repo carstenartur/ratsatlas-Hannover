@@ -3,11 +3,11 @@
  * daimpad/ratsatlas-bonn@f8850008e81825ae79be49ca7f3441b928a1858b (MIT).
  * The verified AtlasData store, qualified identifiers and original geometries
  * remain the data authority. No Bonn-only datasets or legal rules are used. */
-import {AtlasData} from './data.js?v=kartenorte-20261121-2';
-import {LEVELS, readState, writeState} from './view-state.js?v=kartenorte-20261121-2';
-import {createBonnPanels} from './bonn-panels.js?v=kartenorte-20261121-2';
-import {createHannoverTimeline} from './timeline-adapter.js?v=kartenorte-20261121-2';
-import {createMapGeography,overviewPoint,combineCoincidentFeatures} from './map-geography.js?v=kartenorte-20261121-2';
+import {AtlasData} from './data.js?v=kartenorte-20261121-3';
+import {LEVELS, readState, writeState} from './view-state.js?v=kartenorte-20261121-3';
+import {createBonnPanels} from './bonn-panels.js?v=kartenorte-20261121-3';
+import {createHannoverTimeline} from './timeline-adapter.js?v=kartenorte-20261121-3';
+import {createMapGeography,overviewPoint,combineCoincidentFeatures} from './map-geography.js?v=kartenorte-20261121-3';
 
 const $ = id => document.getElementById(id);
 const format = n => Number(n).toLocaleString('de-DE');
@@ -368,6 +368,7 @@ async function startMap() {
   try {
     if (!map) {
       map = L.map('map',{preferCanvas:true,zoomAnimation:false,minZoom:2,maxZoom:19,worldCopyJump:true,zoomControl:false}).setView([state.lat,state.lng],state.zoom);
+      map.attributionControl.setPrefix('<a href="https://bonn.ratsatlas.de/" target="_blank" rel="noopener">Ratsatlas Bonn</a> · <a href="datenschutz.html">Datenschutz</a>');
       const pane = map.createPane(selectionPane);
       pane.style.zIndex = '410';
       pane.style.pointerEvents = 'none';

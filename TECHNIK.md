@@ -250,7 +250,7 @@ Hosting bestimmt; die alte Apache-.htaccess wird dort nicht ausgewertet.
 Ziel ist die Projektadresse
 [https://carstenartur.github.io/ratsatlas-Hannover/](https://carstenartur.github.io/ratsatlas-Hannover/).
 Die normalen Asset- und Datenpfade sind relativ. Anwendungsdateien, Module und
-Worker verwenden gemeinsam `v=kartenorte-20261121-2`. Die 404-Seite benutzt dagegen
+Worker verwenden gemeinsam `v=kartenorte-20261121-3`. Die 404-Seite benutzt dagegen
 den bekannten Projektwurzelpfad /ratsatlas-Hannover/, damit sie auch bei
 fehlerhaften verschachtelten Adressen ihre Gestaltung und Startseite findet.
 Canonical, Sitemap und robots.txt beziehen sich auf die Projektadresse.
