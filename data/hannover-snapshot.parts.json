@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "archive": "hannover-snapshot.tar.gz",
+  "sha256": "6718a4700d32d06cadf5a65ddb79b9e4ff9f4fb758a508f189a1d03919ee8590",
+  "bytes": 32993473,
+  "parts": [
+    {
+      "path": "hannover-snapshot.tar.gz.part01",
+      "bytes": 9437184,
+      "sha256": "899f6bbb0c25d814010a0606ab27c197ed163f15b6514747e582fc543526dc88"
+    },
+    {
+      "path": "hannover-snapshot.tar.gz.part02",
+      "bytes": 9437184,
+      "sha256": "0c968f12839cc7f416782e2c8a0f097729993f12b3af47b2ab363451e37fbde0"
+    },
+    {
+      "path": "hannover-snapshot.tar.gz.part03",
+      "bytes": 9437184,
+      "sha256": "158045caeefdfc8a734ada292c9e4ce251a7d49cd3df4e929cc8494d7068cf74"
+    },
+    {
+      "path": "hannover-snapshot.tar.gz.part04",
+      "bytes": 4681921,
+      "sha256": "c2d282888e2679f3cc10fb7970ac3015ef6f21b6042c945f52081772b7e17bd5"
+    }
+  ]
+}

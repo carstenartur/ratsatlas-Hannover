@@ -1,84 +1,188 @@
-<div align="center">
+# Ratsatlas Hannover
 
-<img src="site/favicon.svg" width="72" height="72" alt="">
+**109.605 öffentliche Vorgänge aus Stadt Hannover, Region Hannover und dem
+Niedersächsischen Landtag gemeinsam recherchieren – mit Originalquellen,
+Ortsbelegen und Karte.**
 
-# Ratsatlas
+Dieser Ratsatlas übernimmt den veröffentlichten Hannover-RIS-Datenstand der
+[Unfallwerkbank](https://carstenartur.github.io/Unfallatlas/) in eine eigenständige
+statische Anwendung. Alle Vorgänge bleiben durchsuchbar, auch ohne Kartenort.
+Die Gestaltung beruht auf [Ratsatlas von Damian Paderta](https://ratsatlas.de/).
 
-**Öffentliche Vorlagen aus kommunalen Ratsinformationssystemen – räumlich, zeitlich und nach Gremien und Ämtern erschlossen.**
+[Technik](TECHNIK.md) · [Datenherkunft und Grenzen](docs/DATEN.md) ·
+[Herkunft und Lizenzen](NOTICE.md) · [Code-Lizenz](LICENSE)
 
-[ratsatlas.de](https://ratsatlas.de) · [Technik](TECHNIK.md) · [Prüfprotokoll](pruefung.tsv)
+## Recherchieren
 
-[![Seite veröffentlichen](https://github.com/daimpad/ratsatlas/actions/workflows/veroeffentlichen.yml/badge.svg)](https://github.com/daimpad/ratsatlas/actions/workflows/veroeffentlichen.yml)
-[![Prüfen](https://github.com/daimpad/ratsatlas/actions/workflows/pruefen.yml/badge.svg)](https://github.com/daimpad/ratsatlas/actions/workflows/pruefen.yml)
-[![Live-Prüfung](https://github.com/daimpad/ratsatlas/actions/workflows/live.yml/badge.svg)](https://github.com/daimpad/ratsatlas/actions/workflows/live.yml)
-[![ratsatlas.de](https://img.shields.io/website?url=https%3A%2F%2Fratsatlas.de&label=ratsatlas.de&up_message=online&down_message=nicht%20erreichbar)](https://ratsatlas.de)
+- Nach Titel, Drucksachennummer oder Ortsbezeichnung suchen. Die Suche läuft im
+  Browser über den gesamten übernommenen Bestand.
+- **Stadt**, **Region** und **Land** gemeinsam oder einzeln auswählen und den
+  Zeitraum nach Jahren eingrenzen.
+- Bei Bedarf nur verortete Vorgänge anzeigen. Die Karte zeigt die vorhandenen
+  Geometrien; Vorgänge ohne Geometrie bleiben in der Liste erreichbar.
+- Einen Vorgang öffnen: Originalverweise, Ortsbelege, vorhandene Beratungsereignisse
+  und dokumentierte Beziehungen stehen in der Detailansicht.
+- Mit **Ansicht teilen** einen Link zu Suche, Filtern, Vorgang und Kartenausschnitt
+  weitergeben. Auf schmalen Bildschirmen zwischen **Liste** und **Karte** wechseln.
+- Unter **Datenstand** die Herkunft, Zeitstände und bekannten Lücken nachlesen.
 
-[![Lizenz: MIT](https://img.shields.io/github/license/daimpad/ratsatlas?label=Code)](LICENSE)
-[![Schrift: SIL OFL 1.1](https://img.shields.io/badge/Schrift-Inter%20%C2%B7%20SIL%20OFL%201.1-6d28d9)](site/fonts/LICENSE-Inter.txt)
-[![WCAG 2.1 AA geprüft](https://img.shields.io/badge/WCAG%202.1%20AA-gepr%C3%BCft%20mit%20axe--core-1f7a4d)](pruefung.tsv)
-![Tracking: keins](https://img.shields.io/badge/Tracking-keins-1f7a4d)
-![Cookies: keine](https://img.shields.io/badge/Cookies-keine-1f7a4d)
-![JavaScript: keins](https://img.shields.io/badge/JavaScript-keins-1f7a4d)
+Die Unfallanalyse ist weiterhin über den Link zur Unfallwerkbank erreichbar.
+Diese Anwendung dient der Recherche in den Rats- und Parlamentsvorgängen.
 
-<br>
+## Übernommener Bestand
 
-<a href="https://ratsatlas.de"><img src="docs/startseite.webp" width="860" alt="Startseite ratsatlas.de: Überschrift „Ratsentscheidungen vor der eigenen Haustür“, Einleitung, Schaltflächen „Städte ansehen“ und „Mitwirken“ und eine stilisierte Stadtkarte mit Ortsmarken über einer Zeitleiste"></a>
+| Quellenebene | Vorgänge | Mit vorhandener Geometrie | Ohne Geometrie |
+|---|---:|---:|---:|
+| Stadt Hannover | 95.535 | 7.969 | 87.566 |
+| Region Hannover | 14.055 | 35 | 14.020 |
+| Land Niedersachsen | 15 | 0 | 15 |
+| **Gesamt** | **109.605** | **8.004** | **101.601** |
 
-</div>
+Die 8.004 verorteten Vorgänge teilen sich **3.395 Geometrien**. Ein Vorgang kann
+mehrere Ortsbezüge haben; eine Geometrie kann zu mehreren Vorgängen gehören.
+Die Übernahme erzeugt keine neuen Koordinaten, Mittelpunktmarkierungen oder
+politischen Bewertungen.
 
-## Worum es geht
+| Zeitangabe | Bedeutung |
+|---|---|
+| **8. November 2026** | Überlieferter globaler Quellenprüfstand (sourceVerifiedAt); einzelne Quellen tragen zusätzlich eigene Zeitstände |
+| **15. November 2026** | Erstellung des veröffentlichten Quellpakets (provenance.builtAt) |
+| **21. November 2026** | Übernahme in diesen Ratsatlas; genauer Zeitpunkt in migration.json |
 
-Der Ratsatlas erschließt öffentliche Vorlagen aus kommunalen Ratsinformationssystemen räumlich, zeitlich und nach beteiligten Gremien und Ämtern. Jede Angabe ist auf ihre Quelle im Ratsinformationssystem rückführbar; abgeleitete Informationen sind gekennzeichnet.
+**Vollständig übernommen ist das veröffentlichte Quellpaket, nicht das amtliche
+Gesamtarchiv.** Die Quelle kennzeichnet ihre Abdeckung als unvollständig. Für
+einzelne Jahrgänge und Detailabrufe bestehen Lücken; der Landtagsbestand umfasst
+nur 15 erschlossene Archivvorgänge. Ältere verifizierte Details bleiben mit ihrem
+ursprünglichen Stand erhalten. Der Import prüft Integrität und Verknüpfungen des
+Pakets, ruft die amtlichen Originale aber nicht erneut ab.
 
-Das Projekt wird von [Offene Kommunen.NRW](https://oknrw.de/) unterstützt.
+Das unveränderte Quellmanifest enthält Quellenstatus, Warnungen, Rechtehinweise
+und Erhebungsgrenzen. Es liegt zusammen mit allen Quelldateien im versionierten
+[Datenarchiv](data/hannover-snapshot.parts.json). Nach dem Entpacken steht es unter
+site/data/ris/hannover.json bereit. Details zur Generation und Abdeckung stehen
+in [docs/DATEN.md](docs/DATEN.md).
 
-Dieses Repository ist der **gemeinsame Kern**: Es trägt die Startseite [ratsatlas.de](https://ratsatlas.de) und die Gestaltungsgrößen (`site/tokens.css`), Schrift und Symbole, die die Stadtinstanzen übernehmen. Jede Stadt läuft unter einer eigenen Subdomain aus einem eigenen Repository.
+## Lokal starten
 
-## Städte
+Python 3.12 und Node.js 24 entsprechen der CI-Umgebung. Die Anwendung benötigt
+keinen Build-Schritt, keinen API-Schlüssel und keine npm-Abhängigkeiten.
+Für die automatisierte Browserprüfung wird zusätzlich Playwright installiert.
 
-| Stadt | Adresse | Datenquelle | Repository | Status |
-|---|---|---|---|---|
-| Bonn | [bonn.ratsatlas.de](https://bonn.ratsatlas.de) | OParl-Schnittstelle der Stadt Bonn | [daimpad/allris-test](https://github.com/daimpad/allris-test) | ![online](https://img.shields.io/badge/-online-1f7a4d) |
-| Köln | [koeln.ratsatlas.de](https://koeln.ratsatlas.de) | OParl-Schnittstelle der Stadt Köln | offen | ![Bestand im Aufbau](https://img.shields.io/badge/-Bestand%20im%20Aufbau-9a5200) |
-| Wuppertal | [wuppertal.ratsatlas.de](https://wuppertal.ratsatlas.de) | OParl-Schnittstelle der Stadt Wuppertal | [daimpad/ratsatlas-wuppertal](https://github.com/daimpad/ratsatlas-wuppertal) | ![Bestand im Aufbau](https://img.shields.io/badge/-Bestand%20im%20Aufbau-9a5200) |
+~~~bash
+python3 scripts/snapshot_bundle.py unpack
+python3 -m http.server --directory site 8000
+~~~
 
-## Vom Commit zur Seite
+Danach [http://localhost:8000/](http://localhost:8000/) öffnen. Die HTML-Datei
+direkt aus dem Dateisystem zu öffnen genügt für Module, Worker und Datenabrufe
+nicht. Ein aktueller Browser mit JavaScript, Web Workers, Web Crypto und
+DecompressionStream wird benötigt. Der Kartenhintergrund wird von
+OpenStreetMap geladen; die Recherche verwendet die mitgelieferten Daten.
 
-Jede Änderung durchläuft dieselben Stationen. Die Badges oben zeigen den aktuellen Zustand jeder Station.
+## Datenstand erneut übernehmen
 
-```mermaid
-flowchart LR
-    PR["Pull Request"] -->|Prüfen| P{"Kacheln =<br>staedte.json?"}
-    P -->|ja| M["main"]
-    M --> V["Seite veröffentlichen"]
-    V -->|Branch deploy<br>mit .htaccess| D["netcup / Plesk<br>(Webhook)"]
-    V -->|site/| G["GitHub Pages<br>(Ausweichadresse)"]
-    D --> R(["ratsatlas.de"])
-    G --> A(["daimpad.github.io/ratsatlas"])
-    L["Live-Prüfung<br>(auf Knopfdruck)"] -.->|Status, Kopfzeilen, Weiterleitungen,<br>Zertifikat, version.txt| R
-```
+Der Import liest ausschließlich das bereits veröffentlichte Datenpaket der
+Unfallwerkbank. Er schreibt zuerst in ein temporäres Nachbarverzeichnis und
+ersetzt den bisherigen Bestand erst nach erfolgreicher Prüfung.
 
-| Workflow | Wann | Was er prüft oder tut |
-|---|---|---|
-| **Prüfen** | jeder Pull Request | Kacheln und JSON-LD in `site/index.html` entsprechen `staedte.json` |
-| **Seite veröffentlichen** | jeder Push auf `main` | prüft erneut, schreibt `site/` als Branch `deploy` für das Webhosting und liefert an GitHub Pages aus |
-| **Live-Prüfung** | auf Knopfdruck | Status 200, fünf Sicherheitskopfzeilen, Weiterleitungen von `http` und `www`, eigene 404-Seite, Zertifikat und ob `ratsatlas.de/version.txt` dem Branch `deploy` entspricht |
+~~~bash
+python3 scripts/import_unfallwerkbank.py \
+  --source-url https://carstenartur.github.io/Unfallatlas/data/ris/ \
+  --output-dir site/data/ris
 
-## Eine Stadt hinzufügen
+python3 scripts/import_unfallwerkbank.py --check --output-dir site/data/ris
+python3 scripts/snapshot_bundle.py pack
+~~~
 
-1. Eintrag in [`staedte.json`](staedte.json) ergänzen (optional mit `themen` – Links auf Themenseiten der Instanz) – Status `im Aufbau` ergibt eine kleinere Kachel (ab Tablet halbe Breite) mit Bildschirmfoto, Chip „Bestand im Aufbau“ und Link, `in Vorbereitung` eine kleinere Kachel mit der Banderole „Im Aufbau“, ohne Link, `online` eine Kachel mit Knopf.
-2. `python3 scripts/kacheln.py` ausführen; das Skript schreibt Kacheln und JSON-LD in `site/index.html`.
-3. Pull Request öffnen – „Prüfen“ stellt sicher, dass HTML und Liste übereinstimmen.
+Ein bereits vollständig heruntergeladenes Quellpaket lässt sich ohne Netz
+übernehmen; --source-url dokumentiert dabei seine veröffentlichte Herkunft:
 
-## Grundsätze
+~~~bash
+python3 scripts/import_unfallwerkbank.py \
+  --source-dir /pfad/zum/vollstaendigen/quellpaket \
+  --source-url https://carstenartur.github.io/Unfallatlas/data/ris/ \
+  --output-dir site/data/ris
+python3 scripts/snapshot_bundle.py pack
+~~~
 
-- **Ohne Tracking und ohne fremde Server:** keine Cookies, keine Reichweitenmessung, keine CDN; auch die Schrift liegt auf dem eigenen Server.
-- **Barrierearm:** axe-core ohne Verstöße bei 360, 768 und 1280 px, Kontraste nachgerechnet, vollständig per Tastatur bedienbar, Rücksicht auf reduzierte Bewegung.
-- **Klein:** rund 65 KB ohne Vorschaubild, kein JavaScript, kein Build-Werkzeug.
-- **Nachvollziehbar:** jede Prüfung mit Werkzeug, Erwartung und Ergebnis in [`pruefung.tsv`](pruefung.tsv).
+Das Originalmanifest und alle **6.905** referenzierten Gzip-Dateien bleiben
+bytegleich. Suchindex und Kartenprojektion werden reproduzierbar abgeleitet;
+migration.json dokumentiert Herkunft, Zählungen und Prüfsummen. Ein späterer
+Quellstand kann andere Zahlen haben.
 
-Aufbau, Sicherheitskopfzeilen, Deployment und Prüfwerkzeuge im Einzelnen: **[TECHNIK.md](TECHNIK.md)**.
+Versioniert werden die vier Teile `data/hannover-snapshot.tar.gz.part01` bis
+`part04`, ihr Manifest und die zugehörige SHA-256-Datei. Das Entpackskript setzt
+sie automatisch zusammen und prüft jeden Teil sowie das vollständige Archiv.
+Das entpackte Verzeichnis site/data/ris/ wird lokal beziehungsweise
+in CI bereitgestellt und nicht nochmals einzeln in Git abgelegt. Nach einer
+Datenaktualisierung gehören Archivteile, Manifest und Prüfsummendatei in denselben Commit.
+Es gibt keinen automatischen Datenabruf.
 
-## Lizenzen
+## Prüfen
 
-Code unter [MIT](LICENSE) · Schrift Inter unter [SIL Open Font License 1.1](site/fonts/LICENSE-Inter.txt) · [Impressum](https://nozilla.de/impressum/) · [Datenschutz](https://ratsatlas.de/datenschutz.html)
+~~~bash
+python3 scripts/snapshot_bundle.py unpack
+npm test
+python3 -m unittest discover -s tests -p 'test_*.py'
+python3 scripts/import_unfallwerkbank.py --check --output-dir site/data/ris
+~~~
+
+Die Browserprüfung arbeitet ebenfalls mit dem tatsächlichen Datenpaket und
+erzeugt Bildschirmbilder für Desktop, Tablet und Telefon:
+
+~~~bash
+npm ci --ignore-scripts
+npx playwright install --with-deps chromium
+npm run test:browser
+~~~
+
+Der CI-Lauf bewahrt diese Bilder und den Prüfbericht als Artefakt
+`hannover-browser-qa` auf.
+
+Die Prüfungen laufen gegen lokale Daten und Testfälle. Sie prüfen unter anderem
+Suche, teilbare Ansichten, Datenzugriff und Importintegrität. Das alte
+pruefung.tsv und die Bildschirmbilder unter pruefung/ stammen vom
+ursprünglichen Ratsatlas-Portal und sind kein Prüfnachweis für diese Anwendung.
+
+## Veröffentlichung
+
+Vorgesehene Adresse:
+[carstenartur.github.io/ratsatlas-Hannover/](https://carstenartur.github.io/ratsatlas-Hannover/).
+**Die Konfiguration allein bedeutet noch nicht, dass die Seite veröffentlicht ist.**
+
+Der Workflow [Prüfen und veröffentlichen](.github/workflows/veroeffentlichen.yml)
+prüft Pull Requests und Änderungen auf main. Nur ein erfolgreicher Push-Lauf
+auf main liefert anschließend site/ an GitHub Pages aus. Das vollständige
+Datenarchiv wird davor entpackt. Dafür muss im Repository unter
+**Settings → Pages → Build and deployment → Source** **GitHub Actions**
+eingerichtet sein. Einen erfolgreichen Lauf und die tatsächlich erreichbare
+Adresse vor einer Bekanntgabe kontrollieren.
+
+Die geerbte Plesk-Veröffentlichung, IndexNow-Meldungen und Live-Prüfungen gegen
+ratsatlas.de sind aus den aktiven Workflows entfernt. Es gibt keinen neuen
+Zeitplan und keine Veröffentlichung in ein fremdes Repository.
+
+## Herkunft, Rechte und Betrieb
+
+- Gestaltung, Schrift- und Iconbasis: **Damian Paderta**,
+  [daimpad/ratsatlas](https://github.com/daimpad/ratsatlas), mit Herkunft aus
+  [Ratsatlas Bonn](https://github.com/daimpad/ratsatlas-bonn). Die ursprüngliche
+  MIT-Lizenz bleibt erhalten.
+- Hannover-Datenbestand: **Unfallwerkbank**,
+  [carstenartur/Unfallatlas](https://github.com/carstenartur/Unfallatlas), mit den
+  im Quellpaket genannten amtlichen Quellen.
+- Kartenbibliothek: **Leaflet 1.9.4**, lokal mit BSD-2-Clause-Lizenz.
+- Schrift: **Inter**, lokal mit SIL Open Font License 1.1.
+- Kartenhintergrund: **© OpenStreetMap-Mitwirkende**; Kartenkacheln werden von
+  tile.openstreetmap.org abgerufen.
+
+Die **MIT-Lizenz des Codes ist keine pauschale Lizenz der Ratsdaten**. Das
+Quellpaket nennt für die Gesamtdaten rights.status: not-specified; seine
+einzelnen Rechte- und Quellenhinweise bleiben erhalten. Siehe [NOTICE.md](NOTICE.md).
+
+Die Instanz gehört zum eigenständigen GitHub-Projekt carstenartur/ratsatlas-Hannover.
+Eine Unterstützung dieser Instanz durch Damian Paderta oder Offene Kommunen.NRW
+wird damit nicht behauptet. Hinweise zur Technik oder zu falschen Zuordnungen
+können im [Projekt](https://github.com/carstenartur/ratsatlas-Hannover)
+eingebracht werden. Die [Datenschutzhinweise](site/datenschutz.html) beschreiben
+Hosting, Kartenabrufe und teilbare Rechercheadressen.
