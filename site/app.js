@@ -1,150 +1,232 @@
+/* Hannover application adapter for the Ratsatlas Bonn UI.
+ * Bonn navigation/panels, list/detail markup and process-line presentation:
+ * daimpad/ratsatlas-bonn@f8850008e81825ae79be49ca7f3441b928a1858b (MIT).
+ * The verified AtlasData store, qualified identifiers and original geometries
+ * remain the data authority. No Bonn-only datasets or legal rules are used. */
 import {AtlasData} from './data.js';
 import {LEVELS, readState, writeState} from './view-state.js';
+import {createBonnPanels} from './bonn-panels.js';
+import {createHannoverTimeline} from './timeline-adapter.js';
 
 const $ = id => document.getElementById(id);
 const format = n => Number(n).toLocaleString('de-DE');
-const labels = {city:'Stadt',region:'Region',state:'Land'};
-const pageSize = 30;
+const labels = {city:'Stadt', region:'Region', state:'Land'};
+const pageSize = 50;
 const atlas = new AtlasData();
 let state = readState(location.href);
-let map, collection, layers, selectedLayer, matched, lastQuery, lastRecord, searchVersion = 0;
-let ready = false, restoring = false, timer, pendingQuery = null, lastFocus;
+let manifest, migration, map, collection, layers, selectedLayer, selectedData, matched;
+let lastQuery, lastRecord, searchVersion = 0, detailVersion = 0;
+let ready = false, restoringMap = false, timer, pendingQuery = null;
 const join = (...values) => values.filter(Boolean).join(' · ');
-function node(tag,text,cls) {
+const date = raw => {
+  const value = /^(\d{4})-(\d{2})-(\d{2})/.exec(raw || '');
+  return value ? `${value[3]}.${value[2]}.${value[1]}` : raw || '';
+};
+function node(tag, text, className) {
   const el = document.createElement(tag);
   if (text != null) el.textContent = text;
-  if (cls) el.className = cls;
+  if (className) el.className = className;
   return el;
 }
-function button(label,action,cls) {
-  const el = node('button',label,cls);
-  el.type = 'button'; el.onclick = action;
-  return el;
+function button(label, action, className = 'btn btn-secondary') {
+  const el = node('button', label, className);
+  el.type = 'button'; el.addEventListener('click',action); return el;
 }
-function link(label,url) {
+function link(label, url, className) {
   if (!url) return null;
   try {
-    const parsed = new URL(url);
-    if (!['https:','http:'].includes(parsed.protocol)) return null;
-    const a = node('a',label); a.href = parsed.href; a.target = '_blank'; a.rel = 'noopener noreferrer'; return a;
+    const target = new URL(url);
+    if (!['https:', 'http:'].includes(target.protocol)) return null;
+    const el = node('a',label,className);
+    el.href = target.href; el.target = '_blank'; el.rel = 'noopener noreferrer'; return el;
   } catch { return null; }
 }
-function append(parent,...children) { parent.append(...children.filter(Boolean)); }
-function date(raw) {
-  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(raw || '');
-  return m ? m[3]+'.'+m[2]+'.'+m[1] : raw || '';
+function append(parent, ...children) { parent.append(...children.filter(Boolean)); }
+function badge(level) { return node('span',labels[level] || 'Quelle','source-badge ' + level); }
+function section(parent, title) {
+  const el = node('section'); el.append(node('h4',title)); parent.append(el); return el;
 }
-function badge(level) { return node('span',labels[level] || 'Quelle','badge '+level); }
-function section(parent,title) {
-  const el = node('section'); el.append(node('h3',title)); parent.append(el); return el;
-}
-function evidence(parent,entry) {
-  if (!entry) return;
-  if (Array.isArray(entry)) { entry.forEach(item => evidence(parent,item)); return; }
-  const text = typeof entry === 'string' ? entry : entry.text;
+function evidence(parent, value) {
+  if (!value) return;
+  if (Array.isArray(value)) { value.forEach(item => evidence(parent,item)); return; }
+  const text = typeof value === 'string' ? value : value.text;
   if (text) parent.append(node('blockquote',text));
-  if (entry.url) append(parent,link('Beleg öffnen',entry.url));
+  if (value.url) append(parent,link('Beleg öffnen ↗',value.url));
 }
-function update(patch,replace = false) {
-  state = {...state,...patch};
+function syncHistory(replace = false) {
   const url = writeState(location.href,state);
   if (url.href !== location.href) history[replace ? 'replaceState' : 'pushState'](null,'',url);
+}
+const panels = createBonnPanels({
+  onChange(open, {reason}) { update({panels:open, pane:open.includes('list') ? 'list' : open.length ? state.pane : 'map'}, reason === 'layout'); }
+});
+const timeline = createHannoverTimeline($('timeline-wrap'), {
+  onRange(from,to) { filter({dateFrom:from, dateTo:to, yearFrom:'', yearTo:''}); },
+  onReset() { resetDates(); },
+  onStateChange(view) { update(view,true); }
+});
+const timelineClose = button('×',() => panels.closePanel('timeline-wrap'),'icon-btn timeline-close');
+timelineClose.setAttribute('aria-label','Zeitleiste einklappen');
+$('timeline-wrap').append(timelineClose);
+
+function update(patch, replace = false) {
+  state = {...state,...patch};
+  state.panels = panels.setState(state.panels);
+  syncHistory(replace);
   render();
 }
-function clearPendingQuery() {
-  clearTimeout(timer);
-  pendingQuery = null;
-}
-function filter(patch) {
+function clearPendingQuery() { clearTimeout(timer); pendingQuery = null; }
+function filter(patch = {}) {
   const query = pendingQuery ?? state.query;
   clearPendingQuery();
   selectedLayer?.remove(); selectedLayer = null;
   update({query,...patch,page:1,record:''});
 }
+function resetDates() {
+  timeline.reset();
+  filter({dateFrom:'', dateTo:'', yearFrom:'', yearTo:''});
+}
 function render() {
-  document.body.dataset.pane = state.pane;
-  $('list-tab').setAttribute('aria-pressed',state.pane === 'list');
-  $('map-tab').setAttribute('aria-pressed',state.pane === 'map');
-  if (pendingQuery === null) $('query').value = state.query;
+  state.panels = panels.setState(state.panels);
+  if (pendingQuery === null) $('q').value = state.query;
   for (const input of $('levels').querySelectorAll('input')) input.checked = state.levels.includes(input.value);
-  $('from').value = state.yearFrom; $('to').value = state.yearTo; $('mapped').checked = state.mappedOnly;
-  if (state.yearFrom || state.yearTo || state.mappedOnly) $('filters').open = true;
-  $('reset').hidden = !(state.query || state.levels.length !== 3 || state.yearFrom || state.yearTo || state.mappedOnly);
+  $('from').value = state.dateFrom || (state.yearFrom ? `${state.yearFrom}-01-01` : '');
+  $('to').value = state.dateTo || (state.yearTo ? `${state.yearTo}-12-31` : '');
+  $('mapped').checked = state.mappedOnly;
+  const hasDates = !!(state.dateFrom || state.dateTo || state.yearFrom || state.yearTo);
+  $('reset-dates').hidden = !hasDates;
+  if (hasDates || state.mappedOnly) $('more-filters').open = true;
+  $('active-filters').textContent = hasDates || state.mappedOnly ? 'aktiv' : '';
+  $('reset').hidden = !(state.query || state.levels.length !== LEVELS.length || hasDates || state.mappedOnly);
+  timeline.setState(state);
   if (!ready) return;
-  const key = JSON.stringify([state.query,state.levels,state.yearFrom,state.yearTo,state.mappedOnly,state.page]);
+  const key = JSON.stringify([state.query,state.levels,state.yearFrom,state.yearTo,state.dateFrom,state.dateTo,state.mappedOnly,state.page]);
   if (key !== lastQuery) { lastQuery = key; runSearch(); }
   if (state.record !== lastRecord) { lastRecord = state.record; renderRecord(); }
 }
 async function runSearch() {
   const version = ++searchVersion;
   map?.closePopup();
-  $('hits').textContent = 'Suche läuft …'; $('list').setAttribute('aria-busy','true');
+  $('count').textContent = 'Suche läuft …'; $('papers').setAttribute('aria-busy','true');
   try {
-    const result = await atlas.search({...state,offset:(state.page-1)*pageSize,limit:pageSize});
+    const result = await atlas.search({...state,offset:(state.page - 1) * pageSize,limit:pageSize});
     if (version !== searchVersion) return;
-    const pages = Math.max(1,Math.ceil(result.total/pageSize));
+    const pages = Math.max(1,Math.ceil(result.total / pageSize));
     if (state.page > pages) { update({page:pages},true); return; }
-    $('hits').textContent = format(result.total)+' Treffer';
-    const buttons = result.items.map(item => {
-      const el = button('',() => selectRecord(item.id),'result');
-      el.append(badge(item.level),node('span','  '+join(item.type,date(item.date)),'meta'),
-        node('span',item.title || item.id,'result-title'),node('span',join(item.number,item.mapped ? 'Verortet' : 'Ohne Kartenort'),'subtle'));
-      return el;
+    $('count').textContent = format(result.total) + ' Treffer';
+    const items = result.items.map(record => {
+      const row = node('li');
+      const el = button('',() => selectRecord(record.id),'');
+      el.dataset.record = record.id; el.setAttribute('aria-current',String(state.record === record.id));
+      const meta = node('span',null,'meta');
+      meta.append(badge(record.level),node('span',record.number || record.id,'record-number'),node('span',date(record.date) || 'Ohne Datum'),node('span',record.type));
+      el.append(node('span',record.title || record.id,'title'),meta,node('span',record.mapped ? 'Mit Kartenort' : 'Ohne Kartenort','meta'));
+      row.append(el); return row;
     });
-    if (!buttons.length) buttons.push(node('p','Keine passenden Vorgänge. Ändere den Suchbegriff oder die Filter.','empty'));
-    $('list').replaceChildren(...buttons); $('list').scrollTop = 0;
+    if (!items.length) {
+      const row = node('li',null,'empty-list');
+      row.append(node('p','Keine passenden Vorgänge. Ändere den Suchbegriff, die Quellen oder den Zeitraum.'),button('Filter zurücksetzen',resetFilters,'btn btn-secondary'));
+      items.push(row);
+    }
+    $('papers').replaceChildren(...items);
     document.querySelector('.pagination').hidden = pages < 2;
     $('prev').disabled = state.page === 1; $('next').disabled = state.page >= pages;
-    $('page').textContent = 'Seite '+format(state.page)+' von '+format(pages);
-    matched = new Set(result.matchedIds); drawFeatures();
+    $('page').textContent = `Seite ${format(state.page)} von ${format(pages)}`;
+    matched = new Set(result.matchedIds);
+    timeline.update(result,{state,manifest});
+    timeline.select(selectedData?.record?.id === state.record ? selectedData : null);
+    drawFeatures();
   } catch (error) {
     if (version !== searchVersion) return;
-    $('hits').textContent = 'Suche nicht verfügbar'; $('list').replaceChildren(node('p',error.message || 'Der Suchindex konnte nicht geladen werden.','empty'),button('Suche erneut laden',runSearch));
-    document.querySelector('.pagination').hidden = true; matched = new Set(); drawFeatures();
-  } finally { if (version === searchVersion) $('list').removeAttribute('aria-busy'); }
+    $('count').textContent = 'Suche nicht verfügbar';
+    const row = node('li',null,'empty-list');
+    row.append(node('p',error.message || 'Der Suchindex konnte nicht geladen werden.','error-message'),button('Suche erneut laden',runSearch));
+    $('papers').replaceChildren(row); document.querySelector('.pagination').hidden = true;
+    matched = new Set(); drawFeatures();
+  } finally { if (version === searchVersion) $('papers').removeAttribute('aria-busy'); }
+}
+function resetFilters() {
+  timeline.reset();
+  filter({query:'',levels:[...LEVELS],yearFrom:'',yearTo:'',dateFrom:'',dateTo:'',mappedOnly:false});
 }
 function selectRecord(id) {
-  if (!$('detail').open) lastFocus = document.activeElement;
-  update({record:id});
+  if (pendingQuery !== null) filter();
+  panels.setPanel('detail',true,{notify:false});
+  update({record:id,panels:panels.getState()});
+  panels.focusPanel('panel-detail');
 }
-function closeRecord() {
-  update({record:''});
-  if (lastFocus?.isConnected) lastFocus.focus();
+function goHome() {
+  clearPendingQuery();
+  panels.setPanel('detail',true,{notify:false});
+  update({record:'',panels:panels.getState()});
+  if (!state.record) showIntro();
+  panels.focusPanel('panel-detail');
+}
+function showMap() {
+  if (pendingQuery !== null) filter();
+  panels.closeAll({notify:false});
+  update({panels:[],pane:'map'});
+  $('map').focus({preventScroll:true});
 }
 function showShare() {
-  if (pendingQuery !== null) filter({});
-  $('share-url').value = location.href; $('copy-status').textContent = ''; $('share-dialog').showModal(); $('share-url').select();
+  if (pendingQuery !== null) filter();
+  panels.setNav(false);
+  syncHistory(true);
+  $('share-url').value = location.href; $('copy-status').textContent = '';
+  if (!$('share-dialog').open) $('share-dialog').showModal();
+  $('share-url').focus(); $('share-url').select();
 }
+function showStatusDialog() { panels.setNav(false); if (!$('status').open) $('status').showModal(); }
+function showIntro() {
+  $('detail-heading').textContent = 'Los geht’s';
+  const body = $('detail');
+  body.replaceChildren(node('p','Stadt · Region · Land','intro-kicker'),node('p','Was wird in Hannover beraten – und wo betrifft es dich?','intro-lead'));
+  body.append(node('p','Recherchiere öffentliche Vorgänge, verfolge ihren Verlauf und öffne die amtlichen Quellen. Die Karte zeigt die überlieferten Orte.'));
+  const stats = node('div',null,'intro-summary');
+  if (manifest) {
+    stats.append(node('strong',format(manifest.recordCount) + ' Vorgänge'));
+    stats.append(node('p',`${format(manifest.mappedRecordCount)} mit Kartenort · ${format(manifest.recordCount - manifest.mappedRecordCount)} ohne Kartenort`));
+    stats.append(node('p','Auch Vorgänge ohne Kartenort bleiben in der Liste und der Suche enthalten.'));
+  } else stats.append(node('p','Der Datenbestand wird geladen …'));
+  body.append(stats);
+  const actions = node('div',null,'intro-actions');
+  actions.append(button('Vorgänge durchsuchen',() => { panels.setPanel('list',true,{focus:true}); },'btn btn-primary'),button('Zeitleiste ansehen',() => panels.setPanel('timeline',true,{focus:true}),'btn btn-secondary'),button('Karte erkunden',showMap,'btn btn-soft'));
+  body.append(actions);
+  const help = node('ul',null,'intro-help');
+  help.append(node('li','Suche nach einer Drucksache, Straße, Hausnummer oder mehreren Begriffen.'),node('li','Wähle Stadt, Region und Land getrennt in der Liste.'),node('li','Grenze den Zeitraum in der Zeitleiste ein. Ein Klick auf einen Vorgang zeigt Quellen, Ortsbelege und verknüpfte Dokumente.'));
+  body.append(help,node('p','Der übernommene Bestand deckt die amtlichen Archive teilweise ab. Datenstände und bekannte Lücken stehen unter „Quellen“.','hint'),button('Datenstand und Quellen',showStatusDialog,'link-btn'));
+}
+
 function openMapRecords(feature,latlng) {
-  const ids = feature.properties.recordIds.filter(id => matched.has(id));
+  const ids = feature.properties.recordIds.filter(id => matched?.has(id));
+  if (!ids.length) return;
   const body = node('div',null,'map-popup'), list = node('div'), pager = node('div',null,'popup-pager');
-  const pages = Math.ceil(ids.length/10);
-  body.append(node('strong',feature.properties.label || 'Kartenort'),node('p',format(ids.length)+' verknüpfte Vorgänge'),list,pager);
+  const pages = Math.ceil(ids.length / 10);
+  body.append(node('strong',feature.properties.label || 'Kartenort'),node('p',format(ids.length) + ' verknüpfte Vorgänge'),list,pager);
   const popup = L.popup().setLatLng(latlng).setContent(body).openOn(map);
   let page = 0;
   async function display(index) {
     page = index;
-    const visible = ids.slice(index*10,(index+1)*10);
+    const visible = ids.slice(index * 10,(index + 1) * 10);
     list.replaceChildren(node('p','Vorgänge werden geladen …')); pager.replaceChildren();
     if (pages > 1) {
-      const back = button('Zurück',() => display(index-1)), next = button('Weiter',() => display(index+1));
-      back.disabled = index === 0; next.disabled = index+1 >= pages;
-      pager.append(back,node('span',(index+1)+' / '+pages),next);
+      const back = button('Zurück',() => display(index - 1),''), next = button('Weiter',() => display(index + 1),'');
+      back.disabled = index === 0; next.disabled = index + 1 >= pages;
+      pager.append(back,node('span',`${index + 1} / ${pages}`),next);
     }
     try {
-      const summaries = await atlas.getSummaries(visible);
+      const records = await atlas.getSummaries(visible);
       if (index !== page || !popup.isOpen()) return;
-      const rows = new Map(summaries.map(r => [r.id,r]));
-      const choices = visible.map(id => {
-        const r = rows.get(id);
-        const el = button('',() => { map.closePopup(); selectRecord(id); });
-        el.append(node('strong',r?.title || id),node('span',join(r?.number,date(r?.date)),'subtle'));
-        return el;
-      });
-      list.replaceChildren(...choices);
+      const byId = new Map(records.map(record => [record.id,record]));
+      list.replaceChildren(...visible.map(id => {
+        const record = byId.get(id);
+        const el = button('',() => { map.closePopup(); selectRecord(id); },'');
+        el.dataset.record = id;
+        el.append(node('strong',record?.title || id),node('span',join(record?.number,date(record?.date)))); return el;
+      }));
     } catch (error) {
       if (index !== page || !popup.isOpen()) return;
-      list.replaceChildren(node('p',error.message || 'Vorgänge konnten nicht geladen werden.'),button('Erneut laden',() => display(index)));
+      list.replaceChildren(node('p',error.message || 'Vorgänge konnten nicht geladen werden.'),button('Erneut laden',() => display(index),''));
     }
     popup.update();
   }
@@ -152,184 +234,243 @@ function openMapRecords(feature,latlng) {
 }
 function drawFeatures() {
   if (!map || !collection || !matched) return;
-  map.closePopup();
-  if (layers) layers.remove();
-  const features = collection.features.filter(f => f.properties.recordIds.some(id => matched.has(id)));
-  const paint = f => {
-    const regional = f.properties.recordIds.some(id => matched.has(id) && id.startsWith('region-'));
-    return {color:regional ? '#24715e' : '#6d28b1',weight:3,opacity:.75,fillOpacity:.36};
+  map.closePopup(); layers?.remove();
+  const features = collection.features.filter(feature => feature.properties.recordIds.some(id => matched.has(id)));
+  const paint = feature => {
+    const region = feature.properties.recordIds.some(id => matched.has(id) && id.startsWith('region-hannover-ris:'));
+    return {color:region ? '#24715e' : '#6d28d9',weight:3,opacity:.8,fillOpacity:.27};
   };
-  layers = L.geoJSON(features,{style:paint,pointToLayer:(f,ll) => L.circleMarker(ll,{...paint(f),radius:5}),
-    onEachFeature(f,layer) {
-      layer.on('click',e => openMapRecords(f,e.latlng));
-    }}).addTo(map);
-  $('map-count').textContent = format(features.length)+' Kartenorte';
+  layers = L.geoJSON(features,{
+    style:paint,
+    pointToLayer:(feature,ll) => L.circleMarker(ll,{...paint(feature),radius:5}),
+    onEachFeature(feature,layer) { layer.on('click',event => openMapRecords(feature,event.latlng)); }
+  }).addTo(map);
+  $('map-count').textContent = format(features.length) + ' Kartenorte';
   selectedLayer?.bringToFront();
+}
+function highlightRecord(data) {
+  selectedLayer?.remove(); selectedLayer = null;
+  if (!map || !data?.features?.length) return;
+  selectedLayer = L.geoJSON(data.features,{
+    interactive:false,
+    style:{color:'#c04c00',weight:5,fillOpacity:.18,interactive:false},
+    pointToLayer:(_feature,ll) => L.circleMarker(ll,{color:'#c04c00',weight:3,radius:9,interactive:false})
+  }).addTo(map);
+}
+function focusRecordMap(data) {
+  showMap(); highlightRecord(data);
+  if (!map || !selectedLayer) return;
+  const bottom = panels.isMobile() ? 150 : 70;
+  map.fitBounds(selectedLayer.getBounds(),{paddingTopLeft:[30,90],paddingBottomRight:[30,bottom],maxZoom:16,animate:false});
 }
 function restoreMap() {
   if (!map) return;
-  restoring = true;
+  restoringMap = true;
   map.invalidateSize({pan:false}); map.setView([state.lat,state.lng],state.zoom,{animate:false});
-  restoring = false;
+  restoringMap = false;
 }
 async function startMap() {
   try {
-    map = L.map('map',{preferCanvas:true,minZoom:2,maxZoom:19,worldCopyJump:true}).setView([state.lat,state.lng],state.zoom);
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{
-      attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',maxZoom:19}).addTo(map);
-    map.on('moveend',() => {
-      if (restoring || !$('map').clientWidth) return;
-      const ll = map.getCenter().wrap();
-      update({lat:+ll.lat.toFixed(5),lng:+ll.lng.toFixed(5),zoom:map.getZoom()},true);
-    });
-    new ResizeObserver(() => { if ($('map').clientWidth) restoreMap(); }).observe($('map'));
+    if (!map) {
+      map = L.map('map',{preferCanvas:true,minZoom:2,maxZoom:19,worldCopyJump:true,zoomControl:false}).setView([state.lat,state.lng],state.zoom);
+      L.control.zoom({position:'topright'}).addTo(map);
+      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{
+        attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>', maxZoom:19
+      }).addTo(map);
+      map.on('moveend',() => {
+        if (restoringMap || !$('map').clientWidth) return;
+        const center = map.getCenter().wrap();
+        update({lat:+center.lat.toFixed(5),lng:+center.lng.toFixed(5),zoom:map.getZoom()},true);
+      });
+      new ResizeObserver(() => { if ($('map').clientWidth) restoreMap(); }).observe($('map'));
+    }
     await loadMapData();
-  } catch (error) { $('map-count').textContent = 'Karte nicht verfügbar: '+error.message; }
+    if (selectedData?.record.id === state.record) highlightRecord(selectedData);
+  } catch (error) {
+    $('map-count').replaceChildren(node('span','Karte nicht verfügbar. '),button('Erneut laden',startMap,'link-btn'));
+    $('map-count').title = error.message;
+  }
 }
 async function loadMapData() {
   $('map-count').textContent = 'Orte werden geladen …';
   try { collection = await atlas.getMap(); drawFeatures(); }
   catch (error) {
-    $('map-count').replaceChildren(node('span',error.message || 'Kartenorte konnten nicht geladen werden.'),
-      button('Erneut laden',loadMapData,'text-button'));
+    $('map-count').replaceChildren(node('span','Kartendaten nicht verfügbar. '),button('Erneut laden',loadMapData,'link-btn'));
+    $('map-count').title = error.message;
   }
 }
 function renderLocations(parent,data) {
   const area = section(parent,'Ortsbezug');
-  if (!data.features.length) area.append(node('p','Für diesen Vorgang ist kein Kartenort belegt.','subtle'));
-  if (data.features.length && map) area.append(button('Auf Karte zeigen',() => {
-    update({record:'',pane:'map'});
-    requestAnimationFrame(() => {
-      map.invalidateSize({pan:false});
-      selectedLayer?.remove();
-      selectedLayer = L.geoJSON(data.features,{interactive:false,style:{color:'#c04c00',weight:5,interactive:false},pointToLayer:(_f,ll) => L.circleMarker(ll,{color:'#c04c00',radius:9,interactive:false})}).addTo(map);
-      map.fitBounds(selectedLayer.getBounds(),{padding:[25,25],maxZoom:16,animate:false});
-    });
-  }));
-  const list = node('ul');
-  for (const loc of data.locations) {
-    const li = node('li'); li.append(node('strong',loc.label || 'Ortsangabe'));
-    li.append(node('p',join(loc.mapped ? 'Verortet' : 'Ohne Kartenort',loc.method,
-      {title:'Beleg im Titel',document:'Beleg im Dokument'}[loc.evidence?.source]),'subtle'));
-    evidence(li,loc.evidence); list.append(li);
+  if (!data.features.length) area.append(node('p','Für diesen Vorgang ist kein Kartenort im übernommenen Bestand enthalten.','section-note'));
+  if (data.features.length) area.append(button('Auf Karte zeigen',() => focusRecordMap(data),'btn btn-secondary'));
+  const list = node('ul',null,'locs');
+  for (const location of data.locations) {
+    const item = node('li');
+    item.append(node('strong',location.label || 'Ortsangabe'),node('p',join(location.mapped ? 'Mit Kartenort' : 'Ohne Kartenort',location.method,{title:'Beleg im Titel',document:'Beleg im Dokument'}[location.evidence?.source]),'evidence-note'));
+    evidence(item,location.evidence); list.append(item);
   }
   if (list.children.length) area.append(list);
+  if (data.features.length) {
+    const details = node('details',null,'acc'); details.append(node('summary','Geometrien und Herkunft'));
+    const entries = node('ul');
+    for (const feature of data.features) entries.append(node('li',join(feature.properties.label,feature.geometry.type,feature.properties.accuracy === 'derived' ? 'Geometrie abgeleitet' : feature.properties.accuracy)));
+    details.append(entries); area.append(details);
+  }
+}
+function renderEvents(parent,data) {
+  const area = section(parent,'Beratungsverlauf');
+  const steps = node('ol',null,'steps');
+  function step(title,when,outcome,source,evidenceValue) {
+    const item = node('li',null,'step'); item.dataset.status = 'belegt';
+    const mark = node('span',null,'mark mark-belegt'); mark.setAttribute('aria-hidden','true');
+    const heading = node('div',title,'step-head'); heading.append(node('span','Quelldaten','step-status'));
+    const body = node('div',null,'step-body');
+    if (when) body.append(node('p',date(when)));
+    if (outcome) body.append(node('p',outcome));
+    evidence(body,evidenceValue); append(body,link('Beratungsquelle ↗',source));
+    if (when) body.append(button('In der Zeitleiste zeigen',() => {
+      panels.setPanel('timeline',true,{focus:true}); timeline.center(when);
+      const view = timeline.getState(); update({timelineZoom:view.timelineZoom,timelineCenter:view.timelineCenter},true);
+    },'jump'));
+    item.append(mark,heading,body); steps.append(item);
+  }
+  if (data.record.date) step('Datum des Vorgangs',data.record.date,null,null,null);
+  for (const event of [...data.events].sort((a,b) => (a.date || '9999').localeCompare(b.date || '9999'))) step(event.body || 'Überlieferter Beratungsschritt',event.date,event.outcome,event.url,event.evidence);
+  if (!data.events.length) area.append(node('p','Keine Beratungsschritte im übernommenen Bestand.','section-note'));
+  if (steps.children.length) area.append(steps);
+}
+function renderRelations(parent,data) {
+  const area = section(parent,'Verknüpfte Dokumente'), list = node('ul',null,'related');
+  const related = new Map();
+  for (const record of data.relatedRecords) { related.set(record.id,record); if (record.sourceId) related.set(record.sourceId,record); }
+  const seen = new Set();
+  const relatedButton = (label,record) => {
+    const el = button(label,() => selectRecord(record.id),'link-btn'); el.dataset.related = record.id; return el;
+  };
+  for (const relation of data.relationships) {
+    const item = node('li'), target = related.get(relation.targetId);
+    const label = target ? join(target.number,target.title) : relation.label || relation.targetId || relation.type;
+    if (target) { item.append(relatedButton(label,target)); seen.add(target.id); }
+    else item.append(node('strong',label));
+    append(item,link('Originalverweis ↗',relation.targetUrl)); evidence(item,relation.evidence); list.append(item);
+  }
+  for (const record of data.relatedRecords) if (!seen.has(record.id) && record.id !== state.record) {
+    const item = node('li'); item.append(relatedButton(join(record.number,record.title) || record.id,record)); list.append(item); seen.add(record.id);
+  }
+  area.append(list.children.length ? list : node('p','Keine Verknüpfungen im übernommenen Bestand.','section-note'));
 }
 async function renderRecord() {
-  const id = state.record, dialog = $('detail'), body = $('detail-body');
-  if (!id) { if (dialog.open) dialog.close(); return; }
-  selectedLayer?.remove(); selectedLayer = null;
-  body.replaceChildren(node('h2','Vorgang wird geladen …')); body.firstChild.id = 'detail-title';
-  if (!dialog.open) dialog.showModal(); dialog.scrollTop = 0;
+  const id = state.record, version = ++detailVersion, body = $('detail');
+  body.removeAttribute('aria-busy');
+  selectedData = null; highlightRecord(null); timeline.select(null);
+  document.querySelectorAll('#papers button[data-record]').forEach(el => el.setAttribute('aria-current',String(el.dataset.record === id)));
+  if (!id) { document.title = 'Ratsatlas Hannover – Vorgänge auf Karte und Zeitleiste'; showIntro(); return; }
+  $('detail-heading').textContent = 'Vorgang';
+  body.replaceChildren(node('h3','Vorgang wird geladen …')); body.setAttribute('aria-busy','true'); body.scrollTop = 0;
   try {
     const data = await atlas.getRecord(id);
-    if (state.record !== id) return;
-    if (!data?.record) throw Error();
-    const r = data.record;
-    const title = node('h2',r.title || r.id); title.id = 'detail-title';
-    body.replaceChildren(badge(r.sourceContext?.level || r.level),title,node('p',join(r.type,r.number,date(r.date))),
-      node('p',join(r.sourceContext?.publisher,r.gremium),'subtle'));
+    if (state.record !== id || version !== detailVersion) return;
+    if (!data?.record) throw new Error('Der Vorgang wurde nicht gefunden.');
+    selectedData = data;
+    const record = data.record, title = node('h3',record.title || record.id); title.tabIndex = -1; title.id = 'detail-title';
+    body.replaceChildren(badge(record.level),title);
+    const facts = node('dl',null,'facts');
+    for (const [label,value] of [['Drucksache',record.number],['Art',record.type],['Datum',date(record.date) || 'Ohne Datum'],['Herausgeber',record.sourceContext?.publisher],['Gremium',record.gremium]]) {
+      if (value) facts.append(node('dt',label),node('dd',value));
+    }
+    if (record.level === 'state' && record.sourceId) facts.append(node('dt','Originalkennung'),node('dd',record.sourceId));
+    body.append(facts);
     const source = section(body,'Quelle');
-    source.append(node('p',r.id,'subtle'));
-    if (r.sourceId && r.sourceId !== r.id) source.append(node('p','Originalkennung: '+r.sourceId,'subtle'));
-    append(source,link(r.url === r.originalPdfUrl ? 'Amtliches Original (PDF) ↗' : 'Amtliches Original öffnen ↗',r.url),
-      r.originalPdfUrl !== r.url && link('Original-PDF ↗',r.originalPdfUrl),button('Vorgang teilen',showShare,'link'));
-    renderLocations(body,data);
-    const timeline = section(body,'Beratungsverlauf');
-    if (!data.events.length) timeline.append(node('p','Keine Beratungsschritte im übernommenen Bestand.','subtle'));
-    const historyList = node('ol');
-    for (const event of [...data.events].sort((a,b) => (a.date || '9999').localeCompare(b.date || '9999'))) {
-      const item = node('li'); item.append(node('strong',join(date(event.date) || 'Ohne Datum',event.body)));
-      if (event.outcome) item.append(node('p',event.outcome));
-      evidence(item,event.evidence); append(item,link('Beratungsquelle ↗',event.url)); historyList.append(item);
-    }
-    timeline.append(historyList);
-    const relations = section(body,'Verknüpfte Dokumente'), list = node('ul');
-    const related = new Map(data.relatedRecords.map(x => [x.sourceId || x.id,x]));
-    const seen = new Set();
-    for (const rel of data.relationships) {
-      const li = node('li'), target = related.get(rel.targetId), label = rel.label || target?.title || rel.targetId || rel.type;
-      if (target) { li.append(button(label,() => selectRecord(target.id),'link')); seen.add(target.id); }
-      else li.append(node('strong',label));
-      append(li,link('Originalverweis ↗',rel.targetUrl)); evidence(li,rel.evidence); list.append(li);
-    }
-    for (const r of related.values()) if (!seen.has(r.id) && r.id !== id) {
-      const li = node('li'); li.append(button(join(r.number,r.title) || r.id,() => selectRecord(r.id),'link')); list.append(li);
-    }
-    relations.append(list.children.length ? list : node('p','Keine Verknüpfungen im übernommenen Bestand.','subtle'));
-  } catch {
-    if (state.record !== id) return;
-    const title = node('h2','Vorgang nicht verfügbar'); title.id = 'detail-title';
-    body.replaceChildren(title,node('p','Die Kennung wurde nicht gefunden oder die Daten konnten nicht geladen werden.'),button('Erneut laden',renderRecord));
-  }
+    const links = node('div',null,'links');
+    append(links,link(record.url === record.originalPdfUrl ? 'Amtliches Original (PDF) ↗' : 'Amtliches Original öffnen ↗',record.url,'btn btn-primary'),record.originalPdfUrl !== record.url && link('Original-PDF ↗',record.originalPdfUrl,'btn btn-secondary'),button('Vorgang teilen',showShare,'btn btn-soft'));
+    source.append(links);
+    const sourceDetails = node('details',null,'acc source-details'); sourceDetails.append(node('summary','Kennung und Herkunft'));
+    const sourceBody = node('div'); sourceBody.append(node('p',record.id,'source-identity'));
+    if (record.sourceId && record.sourceId !== record.id) sourceBody.append(node('p','Originalkennung: ' + record.sourceId,'source-identity'));
+    const sourceStatus = manifest.sourceStatuses?.find(item => item.source === record.source);
+    if (sourceStatus?.retrievedAt) sourceBody.append(node('p','Amtliche Quelle abgerufen: ' + date(sourceStatus.retrievedAt),'hint'));
+    sourceDetails.append(sourceBody); source.append(sourceDetails);
+    renderEvents(body,data); renderLocations(body,data); renderRelations(body,data);
+    const back = node('p',null,'back-home'); back.append(button('← Zurück zu „Los geht’s“',goHome,'link-btn')); body.append(back);
+    timeline.select(data); highlightRecord(data);
+    document.title = `${record.number || record.title} – Ratsatlas Hannover`;
+    $('announce').textContent = `Vorgang ${record.number || ''} geöffnet: ${record.title || record.id}`;
+    if (!$('panel-detail').hidden) title.focus({preventScroll:true});
+  } catch (error) {
+    if (state.record !== id || version !== detailVersion) return;
+    body.replaceChildren(node('h3','Vorgang nicht verfügbar'),node('p',error.message || 'Die Daten konnten nicht geladen werden.','error-message'),button('Erneut laden',renderRecord));
+  } finally { if (state.record === id && version === detailVersion) body.removeAttribute('aria-busy'); }
 }
-function showStatus(manifest,migration) {
+function renderStatus() {
   const {recordCount,mappedRecordCount,levelCounts,coverage} = manifest;
-  const levels = LEVELS.filter(l => levelCounts[l]);
-  $('stats').replaceChildren(node('strong',format(recordCount)+' Vorgänge'),' · '+format(mappedRecordCount)+' verortet · '+levels.length+' Ebenen');
-  $('stamp').textContent = 'Quellenstand '+date(manifest.generatedAt);
-  const body = $('status-body'); body.replaceChildren(node('p','Die Unfallwerkbank erschließt öffentliche Rats- und Landtagsdaten. Der übernommene Bestand deckt die amtlichen Archive teilweise ab.'),
-    node('p','Quellenstand '+date(manifest.generatedAt)+' · Import in den Ratsatlas '+date(migration.importedAt)),
-    node('p','Der Import übernimmt den veröffentlichten Datenstand. Die Zeitpunkte der amtlichen Abrufe stehen bei den einzelnen Quellen.','subtle'));
-  const totals = section(body,'Bestand nach Ebene');
-  for (const l of levels) totals.append(node('p',labels[l]+' · '+format(levelCounts[l].records)+' Vorgänge · '+format(levelCounts[l].mapped)+' verortet'));
-  totals.append(node('p',format(recordCount-mappedRecordCount)+' Vorgänge ohne Kartenort sind über die Liste recherchierbar.'));
-  const sources = section(body,'Amtliche Quellen');
-  for (const s of manifest.sourceStatuses || []) {
-    const row = node('details'); row.append(node('summary',s.source+' · '+format(s.recordCount)+' Vorgänge'),
-      node('p',join(s.retrievedAt && 'Abgerufen '+date(s.retrievedAt),s.from && 'Zeitraum '+date(s.from)+' bis '+(date(s.to)||'offen')),'subtle'),node('p',s.message));
-    append(row,link('Quelle öffnen ↗',s.url)); sources.append(row);
+  const body = $('status-body');
+  body.replaceChildren(node('p','Die Unfallwerkbank erschließt öffentliche Rats- und Landtagsdaten. Der übernommene Bestand deckt die amtlichen Archive teilweise ab.'));
+  const verified = manifest.provenance?.sourceVerifiedAt;
+  append(body,verified && node('p','Quellenprüfstand: ' + date(verified)),node('p','Bestand erzeugt: ' + date(manifest.provenance?.builtAt || manifest.generatedAt) + ' · Import in den Ratsatlas: ' + date(migration.importedAt),'hint'));
+  const totals = node('section'); totals.append(node('h3','Bestand nach Ebene')); body.append(totals);
+  for (const level of LEVELS) if (levelCounts[level]) totals.append(node('p',`${labels[level]} · ${format(levelCounts[level].records)} Vorgänge · ${format(levelCounts[level].mapped)} mit Kartenort`));
+  totals.append(node('p',`${format(recordCount - mappedRecordCount)} Vorgänge ohne Kartenort sind über die Liste recherchierbar.`));
+  const sources = node('section'); sources.append(node('h3','Amtliche Quellen')); body.append(sources);
+  for (const source of manifest.sourceStatuses || []) {
+    const details = node('details'); details.append(node('summary',source.source + ' · ' + format(source.recordCount) + ' Vorgänge'),node('p',join(source.retrievedAt && 'Abgerufen ' + date(source.retrievedAt),source.from && 'Zeitraum ' + date(source.from) + ' bis ' + (date(source.to) || 'offen')),'hint'),node('p',source.message));
+    append(details,link('Quelle öffnen ↗',source.url)); sources.append(details);
   }
-  const gaps = section(body,'Abdeckung und bekannte Lücken');
-  gaps.append(node('p','Erfassungszeitraum '+date(coverage.from)+' bis '+date(coverage.to)));
+  const gaps = node('section'); gaps.append(node('h3','Abdeckung und bekannte Lücken')); body.append(gaps);
+  gaps.append(node('p','Erfassungszeitraum ' + date(coverage.from) + ' bis ' + date(coverage.to)));
   if (manifest.refreshFailure) gaps.append(node('p',join(date(manifest.refreshFailure.attemptedAt),manifest.refreshFailure.reason)));
   const years = manifest.provenance?.collection?.continuation?.pendingYears;
-  if (years?.length) gaps.append(node('p','Offene Jahrgänge: '+years.join(', ')));
-  const list = node('ul');
-  for (const warning of coverage.warnings || []) list.append(node('li',warning));
-  gaps.append(list);
+  if (years?.length) gaps.append(node('p','Offene Jahrgänge: ' + years.join(', ')));
+  const warnings = node('ul',null,'coverage-list'); for (const warning of coverage.warnings || []) warnings.append(node('li',warning)); gaps.append(warnings);
   const rights = manifest.provenance?.rights;
   if (rights) {
-    const area = section(body,'Quellenrechte');
-    area.append(node('p',rights.license || 'Der Datenbestand weist keine einheitliche Lizenz aus.'));
-    for (const credit of rights.attribution || []) area.append(node('p',credit,'subtle'));
+    const area = node('section'); area.append(node('h3','Quellenrechte'),node('p',rights.license || 'Der Datenbestand weist keine einheitliche Lizenz aus.'));
+    for (const credit of rights.attribution || []) area.append(node('p',credit,'hint')); body.append(area);
   }
+  const footer = node('p',null,'source-footer-links');
+  append(footer,link('Ratsatlas Bonn · Damian Paderta','https://bonn.ratsatlas.de/'),link('Hannover-Daten in der Unfallwerkbank','https://carstenartur.github.io/Unfallatlas/'),link('Quellcode und Lizenz','https://github.com/carstenartur/ratsatlas-Hannover'));
+  body.append(footer);
 }
-$('query').oninput = () => {
-  clearTimeout(timer);
-  pendingQuery = $('query').value;
-  timer = setTimeout(() => filter({}),200);
-};
-$('levels').onchange = () => filter({levels:[...$('levels').querySelectorAll(':checked')].map(el => el.value)});
-for (const [id,key] of [['from','yearFrom'],['to','yearTo']]) $(id).onchange = () => {
-  if ($(id).reportValidity()) filter({[key]:$(id).value});
-};
-$('mapped').onchange = () => filter({mappedOnly:$('mapped').checked});
-$('reset').onclick = () => { filter({query:'',levels:[...LEVELS],yearFrom:'',yearTo:'',mappedOnly:false}); };
-$('list-tab').onclick = () => update({pane:'list'});
-$('map-tab').onclick = () => update({pane:'map'});
-$('prev').onclick = () => update({page:state.page-1}); $('next').onclick = () => update({page:state.page+1});
-$('detail-close').onclick = closeRecord;
-$('detail').oncancel = e => { e.preventDefault(); closeRecord(); };
-$('status-open').onclick = () => $('status').showModal();
-$('status-close').onclick = () => $('status').close(); $('share-close').onclick = () => $('share-dialog').close();
-$('share').onclick = showShare;
-$('copy').onclick = async () => {
+
+$('q').addEventListener('focus',() => { if ($('panel-list').hidden) panels.setPanel('list',true); });
+$('q').addEventListener('input',() => {
+  clearTimeout(timer); pendingQuery = $('q').value; timer = setTimeout(() => filter(),200);
+});
+$('nav-search').addEventListener('submit',event => { event.preventDefault(); if (pendingQuery !== null) filter(); panels.setPanel('list',true,{focus:true}); });
+$('filters').addEventListener('submit',event => event.preventDefault());
+$('levels').addEventListener('change',() => filter({levels:[...$('levels').querySelectorAll(':checked')].map(el => el.value)}));
+for (const [id,key,oldKey] of [['from','dateFrom','yearFrom'],['to','dateTo','yearTo']]) $(id).addEventListener('change',() => {
+  if ($(id).reportValidity()) filter({[key]:$(id).value,[oldKey]:''});
+});
+$('mapped').addEventListener('change',() => filter({mappedOnly:$('mapped').checked}));
+$('reset').addEventListener('click',resetFilters); $('reset-dates').addEventListener('click',resetDates);
+$('map-view').addEventListener('click',showMap);
+for (const [id,delta] of [['prev',-1],['next',1]]) $(id).addEventListener('click',() => {
+  update({page:state.page + delta}); $('panel-list').querySelector('.panel-body').scrollTop = 0; $('papers').focus({preventScroll:true});
+});
+$('status-open').addEventListener('click',showStatusDialog);
+$('status-close').addEventListener('click',() => $('status').close());
+$('share').addEventListener('click',showShare); $('share-close').addEventListener('click',() => $('share-dialog').close());
+$('copy').addEventListener('click',async () => {
   try { await navigator.clipboard.writeText($('share-url').value); $('copy-status').textContent = 'Link kopiert.'; }
   catch { $('share-url').select(); $('copy-status').textContent = 'Der Link ist zum Kopieren markiert.'; }
-};
-window.addEventListener('popstate',() => {
-  clearPendingQuery(); selectedLayer?.remove(); selectedLayer = null;
-  state = readState(location.href); render(); restoreMap();
 });
-render();
+document.addEventListener('click',event => {
+  if (event.target.closest('.skip-link')) { event.preventDefault(); $('q').focus(); }
+  if (event.target.closest('[data-home]')) { event.preventDefault(); goHome(); }
+  if (event.target.closest('[data-open-status]')) showStatusDialog();
+});
+window.addEventListener('popstate',() => {
+  clearPendingQuery(); state = readState(location.href); render(); restoreMap();
+});
+showIntro(); render();
 try {
-  const {manifest,migration} = await atlas.init();
-  showStatus(manifest,migration); ready = true; startMap(); render();
+  ({manifest,migration} = await atlas.init());
+  renderStatus(); ready = true; showIntro(); startMap(); render();
 } catch (error) {
-  $('stats').textContent = 'Der Datenbestand konnte nicht geladen werden.';
-  $('status-body').textContent = error.message || 'Quelleninformationen sind momentan nicht verfügbar.';
-  console.error('Ratsatlas konnte den Datenbestand nicht initialisieren:',error);
-  $('hits').textContent = 'Daten nicht verfügbar'; $('list').append(button('Seite neu laden',() => location.reload()));
+  $('count').textContent = 'Daten nicht verfügbar';
+  const message = error.message || 'Der Datenbestand konnte nicht geladen werden.';
+  $('detail').replaceChildren(node('h3','Datenbestand nicht verfügbar'),node('p',message,'error-message'),button('Seite neu laden',() => location.reload()));
+  $('status-body').replaceChildren(node('p',message,'error-message'),button('Seite neu laden',() => location.reload()));
+  const row = node('li',null,'empty-list'); row.append(node('p',message),button('Seite neu laden',() => location.reload())); $('papers').replaceChildren(row);
   $('map-count').textContent = 'Karte nicht verfügbar';
 }

@@ -35,10 +35,15 @@ jobs:
         run: python3 -m unittest discover -s tests -p 'test_*.py'
       - name: Gesamten übernommenen Datenstand offline prüfen
         run: python3 scripts/import_unfallwerkbank.py --check --output-dir site/data/ris
-      - name: Chromium für die Sichtprüfung installieren
-        run: npx playwright install --with-deps chromium
-      - name: Echte Daten auf Desktop, Tablet und Telefon prüfen
+      - name: Chromium und WebKit für die Sichtprüfung installieren
+        run: npx playwright install --with-deps chromium webkit
+      - name: Echte Daten in Chromium auf Desktop, Tablet und Telefon prüfen
         run: npm run test:browser
+      - name: Echte Daten in WebKit auf Desktop, Tablet und Telefon prüfen
+        if: success() || failure()
+        run: npm run test:browser
+        env:
+          BROWSER_ENGINE: webkit
       - name: Browser-Prüfbericht und Bildschirmbilder aufbewahren
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -66,6 +71,10 @@ jobs:
           python-version: '3.12'
       - name: Geprüften Datenstand aus dem Archiv bereitstellen
         run: python3 scripts/snapshot_bundle.py unpack
+      - name: Lizenzen und Herkunft mit ausliefern
+        run: |
+          cp LICENSE site/LICENSE
+          cp NOTICE.md site/NOTICE.md
       - uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
       - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
         with:
