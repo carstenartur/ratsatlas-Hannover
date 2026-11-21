@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {areaCounts, areaMode, overviewPoint, combineCoincidentFeatures} from '../site/map-geography.js';
+import {areaCounts, areaMode, overviewPoint, combineCoincidentFeatures, mapDisplayFeatures} from '../site/map-geography.js';
 
 test('coincident source and supplemental locations expose every linked record through one clickable shape', () => {
   const geometry = {type:'LineString',coordinates:[[9.72,52.37],[9.74,52.39]]};
@@ -37,4 +37,43 @@ test('line overview symbols use a point on the original line', () => {
   assert.deepEqual(overviewPoint({type: 'Point',coordinates: [9,52]}), [9,52]);
   assert.deepEqual(overviewPoint({type: 'LineString',coordinates: [[0,0],[0,2],[4,2]]}), [1,2]);
   assert.deepEqual(overviewPoint({type: 'MultiLineString',coordinates: [[[0,0],[1,0]],[[2,2],[2,8]]]}), [2,5]);
+});
+
+test('a compact crossing remains visible in overview at one of its actual intersections', () => {
+  const coordinates = [[9.717473,52.386018],[9.717733,52.386092]];
+  const point = overviewPoint({type:'MultiPoint',coordinates});
+  assert.ok(coordinates.some(([lon,lat]) => point?.[0] === lon && point?.[1] === lat),
+    'overview must use an existing intersection for the crossing marker');
+});
+
+test('area locations keep their polygons below precise streets and points at either detail level', () => {
+  const street = {type:'Feature',geometry:{type:'LineString',coordinates:[[9.71,52.4],[9.73,52.4]]},
+    properties:{kind:'street',geometryId:'street'}};
+  const address = {type:'Feature',geometry:{type:'Point',coordinates:[9.718,52.4]},
+    properties:{kind:'address',geometryId:'address'}};
+  const area = {type:'Feature',geometry:{type:'Polygon',coordinates:[[[9.7,52.41],[9.74,52.41],[9.74,52.38],[9.7,52.41]]]},
+    properties:{kind:'area',geometryId:'district',areaId:'bezirk:01'}};
+  const features = [street,address,area];
+  const expectedOverviewStreet = {...street,geometry:{type:'Point',coordinates:[9.72,52.4]}};
+  const before = structuredClone(features);
+
+  assert.deepEqual(mapDisplayFeatures(features,false),[area,expectedOverviewStreet,address]);
+  assert.deepEqual(mapDisplayFeatures(features,true),[area,street,address]);
+  assert.deepEqual(features,before,'display transformation modified source geometries or ordering');
+});
+
+test('contained neighborhoods draw above their districts in stable order, with precise places on top', () => {
+  function square(areaId, min, max) {
+    return {type:'Feature',properties:{kind:'area',areaId},
+      geometry:{type:'Polygon',coordinates:[[[min,min],[max,min],[max,max],[min,max],[min,min]]]}};
+  }
+  const districtA = square('bezirk:01',0,10), districtB = square('bezirk:02',20,30);
+  const childA = square('stadtteil:01',2,6), childB = square('stadtteil:10',23,27);
+  const point = {type:'Feature',properties:{kind:'address'},geometry:{type:'Point',coordinates:[4,4]}};
+  const source = [childB,point,districtA,childA,districtB];
+  const before = structuredClone(source);
+  for (const detail of [false,true]) {
+    assert.deepEqual(mapDisplayFeatures(source,detail),[districtA,districtB,childB,childA,point]);
+  }
+  assert.deepEqual(source,before);
 });

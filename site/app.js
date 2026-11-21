@@ -3,11 +3,11 @@
  * daimpad/ratsatlas-bonn@f8850008e81825ae79be49ca7f3441b928a1858b (MIT).
  * The verified AtlasData store, qualified identifiers and original geometries
  * remain the data authority. No Bonn-only datasets or legal rules are used. */
-import {AtlasData} from './data.js?v=kartenorte-20261121-4';
-import {LEVELS, readState, writeState} from './view-state.js?v=kartenorte-20261121-4';
-import {createBonnPanels} from './bonn-panels.js?v=kartenorte-20261121-4';
-import {createHannoverTimeline} from './timeline-adapter.js?v=kartenorte-20261121-4';
-import {createMapGeography,overviewPoint,combineCoincidentFeatures} from './map-geography.js?v=kartenorte-20261121-4';
+import {AtlasData} from './data.js?v=kartenorte-20261121-5';
+import {LEVELS, readState, writeState} from './view-state.js?v=kartenorte-20261121-5';
+import {createBonnPanels} from './bonn-panels.js?v=kartenorte-20261121-5';
+import {createHannoverTimeline} from './timeline-adapter.js?v=kartenorte-20261121-5';
+import {createMapGeography,mapDisplayFeatures,combineCoincidentFeatures} from './map-geography.js?v=kartenorte-20261121-5';
 
 const $ = id => document.getElementById(id);
 const format = n => Number(n).toLocaleString('de-DE');
@@ -228,8 +228,12 @@ function openMapRecords(feature,latlng) {
   if (!ids.length) return;
   const body = node('div',null,'map-popup'), list = node('div'), pager = node('div',null,'popup-pager');
   const pages = Math.ceil(ids.length / 10);
-  body.append(node('strong',feature.properties.label || 'Kartenort'),node('p',format(ids.length) + ' verknüpfte Vorgänge'),list,pager);
-  const popup = L.popup().setLatLng(latlng).setContent(body).openOn(map);
+  body.append(node('strong',feature.properties.label || 'Kartenort'));
+  if (feature.properties.kind === 'area') body.append(node('p',feature.properties.accuracy));
+  body.append(node('p',format(ids.length) + ' verknüpfte Vorgänge'),list,pager);
+  const {paddingTopLeft, paddingBottomRight} = mapPadding();
+  const popup = L.popup({autoPanPaddingTopLeft:paddingTopLeft,autoPanPaddingBottomRight:paddingBottomRight})
+    .setLatLng(latlng).setContent(body).openOn(map);
   let page = 0;
   async function display(index) {
     page = index;
@@ -280,7 +284,7 @@ function drawFeatures() {
     const region = feature.properties.recordIds.some(id => matched.has(id) && id.startsWith('region-hannover-ris:'));
     return {color:region ? '#24715e' : '#6d28d9',weight:3,opacity:.8,fillOpacity:.27};
   };
-  const display = detail ? features : features.map(feature => ({...feature,geometry:{type:'Point',coordinates:overviewPoint(feature.geometry)}})).filter(feature => feature.geometry.coordinates);
+  const display = mapDisplayFeatures(features,detail);
   layers = L.geoJSON(combineCoincidentFeatures(display),{
     style:paint,
     pointToLayer:(feature,ll) => L.circleMarker(ll,{color:'#fff',weight:1.5,opacity:1,fillColor:paint(feature).color,fillOpacity:.85,radius:5}),
@@ -523,9 +527,9 @@ function renderStatus() {
   totals.append(node('p',`${format(recordCount - mappedRecordCount)} Vorgänge ohne Kartenort sind über die Liste recherchierbar.`));
   if (manifest.enrichment) {
     const additions = section(body,'Ergänzte Kartenorte');
-    const {originalMappedRecordCount,addedRecordCount} = manifest.enrichment.totals;
-    additions.append(node('p',`${format(originalMappedRecordCount)} Vorgänge hatten bereits einen Kartenort im Quellpaket. ${format(addedRecordCount)} weitere Vorgänge wurden anhand belegter Projektstandorte, amtlicher Hauskoordinaten oder Straßenachsen verortet.`));
-    additions.append(node('p','Genauigkeit und Beleg stehen am jeweiligen Ortsbezug. Eine Straßenachse zeigt den Straßenverlauf, ein Projektpunkt den belegten Standort; daraus wird keine Grundstücksgrenze abgeleitet. Die Originaldaten bleiben erhalten.'));
+    const {originalMappedRecordCount,addedRecordCount,areaOnlyRecordCount=0} = manifest.enrichment.totals;
+    additions.append(node('p',`${format(originalMappedRecordCount)} Vorgänge hatten bereits einen Kartenort im Quellpaket. ${format(addedRecordCount)} weitere Vorgänge haben ergänzte Ortsbezüge: ${format(addedRecordCount-areaOnlyRecordCount)} anhand belegter Projektstandorte, amtlicher Hauskoordinaten, Straßenachsen oder Kreuzungen und ${format(areaOnlyRecordCount)} mit ausdrücklich benanntem Stadtbezirk oder Stadtteil.`));
+    additions.append(node('p','Genauigkeit und Beleg stehen am jeweiligen Ortsbezug. Eine Straßenachse zeigt den Straßenverlauf, ein Projektpunkt den belegten Standort und ein Kreuzungsbereich den Schnitt der amtlichen Straßenachsen. Bei „Nur Stadtbezirk bekannt“ oder „Nur Stadtteil bekannt“ zeigt die Fläche die grobe Ortsangabe; die genaue Lage der Maßnahme bleibt offen. Die Originaldaten bleiben erhalten.'));
     for (const source of manifest.enrichment.sources) {
       const credit = node('p'); append(credit,link(source.label,source.url));
       if (source.licenseUrl) append(credit,node('span',' · '),link('Lizenz',source.licenseUrl));
@@ -534,7 +538,7 @@ function renderStatus() {
   }
   if (geographyData) {
     const areas = section(body,'Stadtbezirke und Stadtteile');
-    areas.append(node('p','Die Gebietsfilter verwenden die amtlichen Grenzen. Gezählt werden passende Vorgänge mit mindestens einem Kartenort im Gebiet. Ein Vorgang kann mehrere Gebiete berühren; die Gebietszahlen sind deshalb nicht additiv.'));
+    areas.append(node('p','Die Gebietsfilter verwenden die amtlichen Grenzen. Gezählt werden passende Vorgänge mit mindestens einem Kartenort im Gebiet. Ist nur der Stadtbezirk bekannt, wird der Vorgang keinem einzelnen Stadtteil zugeteilt. Ein ausdrücklich genannter Stadtteil zählt auch zu seinem Bezirk. Andere Kartenorte können mehrere Gebiete berühren; die Gebietszahlen sind deshalb nicht additiv.'));
     for (const source of geographyData.sources || []) {
       areas.append(node('p',source.attribution));
       append(areas,link(source.dataset || 'Amtliche Gebietsgrenzen',source.url),link('Lizenz',source.licenseUrl));

@@ -10,6 +10,9 @@ import re
 import tempfile
 
 from import_unfallwerkbank import Snapshot, SourceReader, compact, digest, geometry_bounds, require, validate_manifest, write_derived
+from geocoding_geometry import intersection_geometry
+from geocoding_areas import AreaResolver
+from build_geography import load_boundaries
 
 
 DATA = Path(__file__).resolve().parents[1] / 'data' / 'geocoding'
@@ -19,6 +22,7 @@ ADDRESS = 'Amtliche Hauskoordinate zum Vorgangstitel'
 DOCUMENT = 'Amtliche Hauskoordinate zum belegten Projekt im Dokument'
 RANGE = 'Amtliche Adresspunkte der im Titel genannten Spanne'
 STREET = 'Amtliche Straßenachse zum Vorgangstitel'
+CROSSING = 'Schnitt amtlicher Straßenachsen zum Vorgangstitel'
 PLAN = re.compile(r'\bbebauungsplan(?:s|es)?(?: der innenentwicklung)? nr\.?\s*1862\s*[-–—]\s*oberstrasse\b')
 SITE = r'[„“»"«]?(?:ehemaligen? )?bumke[- ](?:gelände(?:s)?|areal(?:s)?)\b'
 SITE_SUBJECT = re.compile(r'\bareal der firma bumke entwickeln\b|'
@@ -27,48 +31,94 @@ SITE_SUBJECT = re.compile(r'\bareal der firma bumke entwickeln\b|'
                           r'\bentwicklungsbereich(?:es|s)? für das ' + SITE)
 COMPARISON = re.compile(r'\b(?:vorbild|vergleich|analog|beispiel|rückblick|anders als|wie beim)\b')
 PRIVATE = re.compile(r'\b(?:anschrift|absender\w*|kontakt(?:adresse)?|wohnanschrift|wohnort|sitzungsort|tagungsort|petition|petent\w*|bürgerantrag|bürgerinitiative|einwohnerfragestunde|zuwendung\w*|beihilf\w*|zusch[uü]ss?\w*|umbesetzung|besetzung|kommission|umbenennung|benennung)\b')
+UNRESOLVED_ROAD = re.compile(r'\b[\w-]+(?:strasse|weg|allee|platz|damm|brücke|chaussee|ufer|stieg|gasse|steig|ring)\b')
 ROAD_ENDING = re.compile(r'(?:strasse|weg|allee|platz|damm|brücke|chaussee|ufer|stieg|gasse|steig|ring)$')
+AMBIGUOUS_PLACE = re.compile(r'(?:park|garten|gärten|holz|heide|masch|see|teich|friedhof|flughafen|messegelände|kindergarten|schule|kirche|hafen)$')
 # These bare words name a class of feature or a district as well as an official street.
 GENERIC_NAMES = {'ring', 'platz', 'ufer', 'brücke', 'allee', 'markt', 'am markt', 'sahlkamp', 'kronsberg'}
-CIVIC = re.compile(r'\b(?:umbau|neubau|ausbau|sanierung|grundsanierung|umgestaltung|verkehrssicherheit|radverkehr|fahrbahn|fussweg|fussgänger|fahrrad|querung|erschliessung|gehweg|spielplatz|beleuchtung|parkplatz|haltestelle|bushaltestelle|strassenreinigung|verkehrsberuhigung|tempo[ -]?30|radweg|kindertagesstätte|kita|kindergarten|krippengruppe|grundschule|schulstandort|feuerwache|unterkunft|wohnheim|wohnungsbau|wohnquartier|wohnraum|grundstück|erbbaurecht|bebauungsplan|ausschreibung|bauvorhaben|unterbringung|schulzentrum|verkehrsführung|schulweg|zebrastreifen|radfahr|fahrradbügel|ampel|parkverbot|baumpflanzung|baumfällung)\w*\b')
 LOCATIVE = re.compile(r'\b(?:an der|am|auf der|auf dem|in der|im|entlang der|für die|der strasse|die strasse|der kreuzung|höhe)\s*$')
-DIRECT = re.compile(r'\b(?:verkehrsberuhigung|querungshilfe|verkehrssicherheit|gehweg|fussweg|radweg|spielplatz|bushaltestelle|haltestelle|strassenausbau|grundsanierung|sanierung|beleuchtung|tempo[ -]?30|wohnheim|unterkunft|kindertagesstätte|kita|grundschule|schulstandort|feuerwache|einrichtung|grundstück|grundstücke|grundstückes|standort|ausschreibung|neubau|ausbau|umbau|parkplatz)\s*(?:[-:]\s*)?$')
+DIRECT = re.compile(r'\b(?:verkehrsberuhigung|querungshilfe|verkehrssicherheit|verkehrssituation|verkehrsführung|'
+                    r'gehweg|fussweg|radweg|fussgängerüberweg|fahrradstrasse|fahrradbügel|bordsteinabsenkung|'
+                    r'parksituation|umgestaltung|ampelschaltung|ampelanlage|spielplatz|bushaltestelle|haltestelle|'
+                    r'strassenausbau|grunderneuerung|grundsanierung|sanierung|beleuchtung|tempo[ -]?30|'
+                    r'wohnheim|unterkunft|kindertagesstätte|kita|grundschule|schulstandort|feuerwache|einrichtung|'
+                    r'grundstück|grundstücke|grundstückes|gebäude|gebäudes|wohnhaus|geschäftshaus|'
+                    r'standort|ausschreibung|neubau|ausbau|umbau|parkplatz)\s*(?:(?:der|die|des|dem)\s+)?(?:[-:]\s*)?$')
 # An object's name may be an entirely different street from its address.
-NAMED_OBJECT = (r'\b(?:\w*schule|einrichtung|kindertagesstätte|kita|kindergarten|schulstandort|feuerwache|'
+NAMED_OBJECT = (r'\b(?:\w*schule|gs|igs|kgs|einrichtung|kindertagesstätte|kita|kindergarten|schulstandort|feuerwache|'
                 r'wohnheim|unterkunft|\w*haltestelle|haltepunkt|station|\w*spielplatz|bolzplatz|parkplatz)')
 OBJECT_PREFIX = re.compile(NAMED_OBJECT + r'\s*(?:[-:]\s*)?$')
 QUOTED_OBJECT = re.compile(NAMED_OBJECT + r"""\s*["„“«»'‚‘][^"„“”«»'‚‘’]*$""")
-SCOPE = re.compile(r'\b(?:zwischen|abschnitt|einmündung|kreuzung|ecke|kreisel|bis zur?|von der .+ bis)\b')
+SCHOOL_PREFIX = re.compile(r'\b(?:\w*schule(?:\s*\((?:gs|igs|kgs)\))?|gs|igs|kgs)\s+(?:an der|am|in der|im|zum|zur)\s*$')
+PARTIAL = r'zwischen|\w*abschnitt\w*|teilbereich\w*|bis (?:zur?|an|auf)|(?:von der|vom) .+ (?:bis|zum|zur)'
+SCOPE = re.compile(r'\b(?:' + PARTIAL + r'|einmündung|kreuzung|ecke|kreisel)\b')
+CROSSING_PREFIX = re.compile(r'\b(?:kreuzung|kreuzungsbereich|knotenpunkt|einmündung|ecke)\s*(?:(?:der|von)\s+)?$')
+CROSSING_JOIN = re.compile(r'\s*(?:/|[-–—]|und|mit|in die|in den|auf die)\s*')
+CROSSING_SCOPE = re.compile(r'\b(?:' + PARTIAL + r')\b')
+MORE_PLACES = re.compile(r'\s*(?:[/&+]|und\b|oder\b|sowie\b)')
 FACILITY = re.compile(r'\b(?:kindertagesstätte|kindergarten|kita|grundschule|feuerwache|schulstandort|krippengruppe|sporthalle)\w*\b')
-PROJECT_ACTION = re.compile(r'\b(?:errichtung|neubau|umbau|ausbau|förderung|betrieb|fortführung|sanierung|erweiterung|aufstockung|umstrukturierung|ersatzbau)\w*\b')
-DOCUMENT_EXCLUDE = re.compile(r'\b(?:auskunft|kontakt|empfänger|ausweich\w*|altstandort|bisherig\w*|sitzung|einladung|vorstand|geschäftsstelle|antragsteller\w*|spenden|eigentümer|beispiel|ersatzstandort)\b')
+FACILITY_NAME = re.compile(r'''\b(?:kindertagesstätte|kindergarten|kita|grundschule|feuerwache|sporthalle)\s*["„“«»'‚‘]\s*([^"„“”«»'‚‘’]{3,80}?)\s*["„“”«»'‚‘’]''')
+PROJECT_ACTION = re.compile(r'\b(?:errichtung|einrichtung|finanzierung|neubau|umbau|ausbau|förderung|betrieb|fortführung|sanierung|erweiterung|aufstockung|umstrukturierung|umwandlung|umzug|ersatzbau)\w*\b')
+DOCUMENT_EXCLUDE = re.compile(r'\b(?:auskunft|kontakt|empfänger|postanschrift|postadresse|korrespondenz|ausweich\w*|altstandort|bisherig\w*|sitzung|einladung|vorstand|geschäftsstelle|antragsteller\w*|spenden|eigentümer|beispiel|ersatzstandort)\b')
+DOCUMENT_RECIPIENT = re.compile(r'\ban (?:die|den|das)\s+(?:kindertagesstätte|kindergarten|kita|grundschule|feuerwache|sporthalle)\b')
+CARE_CAPACITY = re.compile(r'\bdie betreuungszeit (?:einer|der) kindergartengruppe\b')
 PROJECT_SITE = re.compile(r'\bam (?:temporären |neuen )?standort (?:in der |im |am )?$')
-DECISION = re.compile(r'\b(?:zuzustimmen|einzurichten|zu errichten|zu erweitern|zu sanieren|fortzuführen|zu betreiben)\b')
+DECISION = re.compile(r'\b(?:zuzustimmen|einzurichten|zu errichten|zu erweitern|zu sanieren|fortzuführen|zu betreiben|umzustrukturieren|umzuwandeln|auszuweiten)\b')
 PLAN_ADDRESS = re.compile(r'\bbebauungsplan(?:s|es)?(?: der innenentwicklung)? nr\.?\s*\d{1,4}\s*[,–—-]\s*$')
 TOKENS = re.compile(r'\w+(?:[-’\']\w+)*')
 NUMBER = r'\d{1,3}(?:\s*[a-z](?!\w))?'
 NUMBERS = re.compile(rf'\s+(?:nr\.?\s*)?({NUMBER})(?!\w)(?:\s*(?:[-–—]|bis(?:\s+nr\.?)?|und(?:\s+nr\.?)?|\+)\s*({NUMBER})(?!\w))?')
 EXTRA_NUMBER = re.compile(r'\s*(?:[-–—/+,]|und |bis )\s*(?:nr\.?\s*)?\d')
+PLAN_PHASE = re.compile(r'\s+[-–—]\s+(?:einleitungsbeschluss|aufstellungsbeschluss|auslegungsbeschluss|satzungsbeschluss)\b')
 FILENAMES = {'searchIndex': 'search-index.json.gz', 'map': 'map.geojson.gz', 'additions': 'additions.json.gz'}
 
 
 def normalize(text):
-    return re.sub(r'str\.(?=\s|$)', 'strasse', ' '.join(text.casefold().split()))
+    return re.sub(r'str\.(?=\s|[,;/()]|$)', 'strasse', ' '.join(text.casefold().split()))
+
+
+def invalid_number_tail(tail):
+    # A numbered list or an unresolved range is not a house-number suffix.
+    return (EXTRA_NUMBER.match(tail) or re.match(r'\s*[.)]\s*\S', tail)
+            or (re.match(r'\s*[-–—/]\s*\w', tail) and not PLAN_PHASE.match(tail)))
+
+
+def named_facility_prefix(title, prefix):
+    names = {match[1].strip() for match in FACILITY_NAME.finditer(title)}
+    if len(names) != 1:
+        return None
+    name, = names
+    # The same facility must immediately introduce its site, not a provider,
+    # neighbouring building, contact person, or previously occupied address.
+    return re.search(r'''\b(?:kindertagesstätte|kindergarten|kita|grundschule|feuerwache|sporthalle)\s*["„“«»'‚‘]?\s*'''
+                     + re.escape(name) + r'''\s*["„“”«»'‚‘’]?\s*,?\s*'''
+                     + r'(?:(?:am (?:temporären |neuen )?standort|in der|im|am)\s*,?\s*)?$', prefix)
 
 
 class Resolver:
-    def __init__(self, gazetteer, site):
+    def __init__(self, gazetteer, site, areas=None):
         self.site = site
         self.gazetteer = gazetteer
+        self.areas = areas
         names = Counter(normalize(entry['name']) for entry in gazetteer['entries'])
-        self.by_first = defaultdict(list)
+        variants = defaultdict(list)
         for entry in gazetteer['entries']:
             name = normalize(entry['name'])
             if entry['kind'] != 'street' or names[name] != 1 or name in GENERIC_NAMES:
                 continue
+            variants[name].append(entry)
+            # Limited German inflection of complete official names. In
+            # particular, "Alten Stöckener Straße" is not "Stöckener Straße".
+            if re.match(r'^(?:alte|neue|grosse|kleine|lange|kurze|obere|untere|vordere|hintere|mittlere) ', name):
+                first, rest = name.split(' ', 1)
+                variants[first + 'n ' + rest].append(entry)
+        self.by_first = defaultdict(list)
+        for name, entries in variants.items():
+            if len({entry['streetKey'] for entry in entries}) != 1:
+                continue
             first = TOKENS.match(name)
             if first:
-                self.by_first[first.group()].append((name, entry))
+                self.by_first[first.group()].append((name, entries[0]))
         for candidates in self.by_first.values():
             candidates.sort(key=lambda pair: -len(pair[0]))
 
@@ -78,7 +128,7 @@ class Resolver:
         require(digest(blob) == GAZETTEER_SHA, 'Hannover gazetteer checksum mismatch')
         gazetteer = json.loads(gzip.decompress(blob))
         require(gazetteer['municipalityKey'] == '03241001', 'Wrong municipality')
-        return cls(gazetteer, json.loads((directory / 'bumke.json').read_bytes()))
+        return cls(gazetteer, json.loads((directory / 'bumke.json').read_bytes()), AreaResolver(*load_boundaries()))
 
     def street_matches(self, title):
         matches = []
@@ -89,8 +139,6 @@ class Resolver:
             for name, entry in self.by_first.get(token.group(), ()):
                 end = token.start() + len(name)
                 if title.startswith(name, token.start()) and (end == len(title) or not (title[end].isalnum() or title[end] in '-_')):
-                    if not ROAD_ENDING.search(name) and not NUMBERS.match(title[end:]):
-                        continue
                     matches.append((token.start(), end, entry))
                     previous_end = end
                     break
@@ -106,11 +154,12 @@ class Resolver:
         wanted, = labels
         for loc in addresses:
             text = normalize(loc['evidence']['text'])
-            if PRIVATE.search(text) or DOCUMENT_EXCLUDE.search(text) or COMPARISON.search(text):
+            if (PRIVATE.search(text) or DOCUMENT_EXCLUDE.search(text) or COMPARISON.search(text)
+                    or DOCUMENT_RECIPIENT.search(text)):
                 continue
             for start, end, entry in self.street_matches(text):
                 numbers = NUMBERS.match(text[end:])
-                if not numbers or numbers[2] or EXTRA_NUMBER.match(text[end+numbers.end():]):
+                if not numbers or numbers[2] or invalid_number_tail(text[end+numbers.end():]):
                     continue
                 number = numbers[1].replace(' ', '')
                 label = entry['name'] + ' ' + number
@@ -119,12 +168,15 @@ class Resolver:
                 at_site = PROJECT_SITE.search(text[:start]) and DECISION.search(text[end:])
                 named_in_title = normalize(entry['name']) in title and re.search(
                     r'\b(?:kita|kindertagesstätte|grundschule|feuerwache|sporthalle)\s*$', text[:start])
-                if not (at_site or named_in_title):
+                same_facility = ((DECISION.search(text) or PROJECT_ACTION.search(text)
+                                  or ('betreuungszeit' in title and CARE_CAPACITY.search(text[:start])))
+                                 and named_facility_prefix(title, text[:start]))
+                if not (at_site or named_in_title or same_facility):
                     continue
                 point = self.gazetteer['addresses'].get(entry['streetKey'], {}).get(number)
                 if point:
                     # Include the locative excerpt, leaving other parties' details out.
-                    excerpt_start = PROJECT_SITE.search(text[:start]) if at_site else named_in_title
+                    excerpt_start = (same_facility or PROJECT_SITE.search(text[:start])) if at_site else (same_facility or named_in_title)
                     excerpt = text[excerpt_start.start():end + numbers.end()]
                     doc = dict(source='document', text=excerpt, url=evidence['url'],
                                note='Ortsbeleg in vereinheitlichter Schreibweise')
@@ -146,24 +198,39 @@ class Resolver:
         if evidence['source'] == 'document' or PLAN.search(title) or SITE_SUBJECT.search(title):
             return [(self.site['name'], self.site['geometry'], 'place', 'Projektstandort', PROJECT,
                      self.site['sourceUrl'], self.site['attribution'], evidence)]
-        if not CIVIC.search(title):
-            return []
         matches = []
         for start, end, entry in self.street_matches(title):
             prefix = title[:start]
             if QUOTED_OBJECT.search(prefix):
                 continue
-            if OBJECT_PREFIX.search(prefix) and not NUMBERS.match(title[end:]):
+            if (OBJECT_PREFIX.search(prefix) or SCHOOL_PREFIX.search(prefix)) and not NUMBERS.match(title[end:]):
                 continue
             matches.append((start, end, entry))
-        title_sites = self.title_street(title, matches, evidence)
+        title_sites = self.title_crossing(title, matches, evidence) or self.title_street(title, matches, evidence)
         if any(NUMBERS.match(title[end:]) for _, end, _ in matches):
-            return title_sites
+            return title_sites or (self.areas.find(row['title'], evidence) if self.areas else [])
         documented = self.document_address(title, evidence, documents)
         if documented and (not matches or all(normalize(entry['name']) + ' ' in normalize(documented[0][0]) + ' '
                                              for _, _, entry in matches)):
             return documented
-        return title_sites
+        return title_sites or (self.areas.find(row['title'], evidence) if self.areas else [])
+
+    def title_crossing(self, title, matches, evidence):
+        if len(matches) != 2 or matches[0][2]['streetKey'] == matches[1][2]['streetKey'] or CROSSING_SCOPE.search(title):
+            return []
+        (start, end, first), (other_start, other_end, second) = matches
+        if (not CROSSING_PREFIX.search(title[:start])
+                or not CROSSING_JOIN.fullmatch(title[end:other_start])
+                or NUMBERS.match(title[other_end:])
+                or MORE_PLACES.match(title[other_end:]) or re.match(r'\s*,', title[other_end:])
+                or UNRESOLVED_ROAD.search(title[other_end:])):
+            return []
+        geometry = intersection_geometry(first['geometry'], second['geometry'])
+        if geometry is None:
+            return []
+        label = ' / '.join(sorted([first['name'], second['name']]))
+        return [(label, geometry, 'crossing', 'Kreuzungsbereich aus Straßenachsen', CROSSING,
+                 self.gazetteer['sourceMetadataUrl'], self.gazetteer['attribution'], evidence)]
 
     def title_street(self, title, matches, evidence):
         if len(matches) != 1:
@@ -171,12 +238,14 @@ class Resolver:
         start, end, entry = matches[0]
         prefix = title[:start].rstrip('„“»"«').rstrip() + ' '
         suffix = title[end:]
-        if not (LOCATIVE.search(prefix) or DIRECT.search(prefix) or (PLAN_ADDRESS.search(prefix) and NUMBERS.match(suffix))):
+        apposition = PROJECT_ACTION.search(title) and named_facility_prefix(title, title[:start])
+        if not (LOCATIVE.search(prefix) or DIRECT.search(prefix)
+                or ((PLAN_ADDRESS.search(prefix) or apposition) and NUMBERS.match(suffix))):
             return []
         numbers = NUMBERS.match(suffix)
         if numbers:
             tail = suffix[numbers.end():]
-            if EXTRA_NUMBER.match(tail) or re.match(r'\s*\.\s*bauabschnitt|\s*[-–—/]\s*\w', tail):
+            if invalid_number_tail(tail):
                 return []
             keys = list(dict.fromkeys(n.replace(' ', '') for n in numbers.groups() if n))
             points = self.gazetteer['addresses'].get(entry['streetKey'], {})
@@ -187,7 +256,11 @@ class Resolver:
             return [(entry['name'] + ' ' + number, dict(type='Point', coordinates=points[number]),
                      'address', accuracy, method, self.gazetteer['addressSourceMetadataUrl'],
                      self.gazetteer['addressAttribution'], evidence) for number in keys]
-        if re.match(r'\s*(?:nr\.?\s*|[0-9/])', suffix) or SCOPE.search(title):
+        if (re.match(r'\s*(?:nr\.?\s*|[0-9/])', suffix) or SCOPE.search(title)
+                or MORE_PLACES.match(suffix) or UNRESOLVED_ROAD.search(suffix)):
+            return []
+        name = normalize(entry['name'])
+        if AMBIGUOUS_PLACE.search(name) and not ROAD_ENDING.search(name) and not re.search(r'\bstrasse\s*$', prefix):
             return []
         return [(entry['name'], entry['geometry'], 'street', 'Straßenverlauf zur Orientierung', STREET,
                  self.gazetteer['sourceMetadataUrl'], self.gazetteer['attribution'], evidence)]
@@ -206,15 +279,18 @@ def project(index, geojson, resolver, documents=None):
         for label, geometry, kind, accuracy, method, source_url, attribution, evidence in found:
             identifier = 'atlas:' + digest(compact([kind, label, accuracy, geometry, source_url]))
             provenance = dict(sourceUrl=source_url, attribution=attribution)
+            scope = dict(areaId=resolver.areas.area_ids[label]) if kind == 'area' else {}
             if identifier not in features:
                 geometry_method = 'Abgleich mit amtlicher Hauskoordinate' if kind == 'address' else method
                 features[identifier] = dict(type='Feature', geometry=geometry, bounds=geometry_bounds(geometry),
                     properties=dict(geometryId=identifier, label=label, accuracy=accuracy, recordIds=[],
                                     method=geometry_method, **provenance, provenance={**provenance, 'method': geometry_method}))
+                if kind == 'area':
+                    features[identifier]['properties'].update(kind='area', **scope)
             features[identifier]['properties']['recordIds'].append(row['id'])
             locations.append(dict(id='atlas-location:' + digest(compact([row['id'], identifier])),
                     geometryId=identifier, label=label, kind=kind, mapped=True, accuracy=accuracy,
-                    evidence=evidence, method=method, **provenance))
+                    evidence=evidence, method=method, **provenance, **scope))
             geometry_ids.append(identifier)
         additions[row['id']] = dict(locations=locations, geometryIds=geometry_ids)
         labels = list(dict.fromkeys([*row['locations'], *(location['label'] for location in locations)]))
@@ -294,14 +370,23 @@ def build(directory, output, check=False):
             and len(geojson['features']) == manifest['geometryCount'], 'Source count mismatch')
     by_method = Counter(method for record in additions['records'].values()
                         for method in {location['method'] for location in record['locations']})
+    by_accuracy = Counter(accuracy for record in additions['records'].values()
+                          for accuracy in {location['accuracy'] for location in record['locations']})
+    area_only = sum(all(location['kind'] == 'area' for location in record['locations'])
+                    for record in additions['records'].values())
     totals = dict(recordCount=len(index['records']), mappedRecordCount=mapped, geometryCount=len(combined_map['features']),
                   levelCounts=levels, originalMappedRecordCount=manifest['mappedRecordCount'], addedRecordCount=n_added,
-                  addedGeometryCount=new_geometries, byMethod=dict(sorted(by_method.items())))
+                  addedGeometryCount=new_geometries, byMethod=dict(sorted(by_method.items())),
+                  byAccuracy=dict(sorted(by_accuracy.items())), areaOnlyRecordCount=area_only)
     sources = [dict(label=resolver.gazetteer[key], url=resolver.gazetteer[url_key],
                     licenseUrl=resolver.gazetteer['licenseUrl'], sha256=GAZETTEER_SHA)
                for key, url_key in [('attribution', 'sourceMetadataUrl'), ('addressAttribution', 'addressSourceMetadataUrl')]]
     sources.append(dict(label=resolver.site['attribution'], url=resolver.site['sourceUrl'],
                         sha256=digest((DATA/'bumke.json').read_bytes())))
+    if area_only:
+        source = resolver.areas.source
+        sources.append(dict(label=source['attribution'], url=source['url'], licenseUrl=source['licenseUrl'],
+                            sha256=source['snapshotSha256']))
     outputs = {'searchIndex': (combined_index, len(combined_index['records'])),
                'map': (combined_map, len(combined_map['features'])), 'additions': (additions, n_added)}
     header = dict(schemaVersion=1, sourceGeneration=manifest['generation'], sourceManifestSha256=source_hash,

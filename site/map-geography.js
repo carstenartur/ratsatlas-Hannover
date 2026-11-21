@@ -52,6 +52,7 @@ function alongLine(line, distance, lengths) {
 
 export function overviewPoint({type, coordinates}) {
   if (type === 'Point') return coordinates;
+  if (type === 'MultiPoint') return coordinates[0] || null;
   const lines = {
     LineString: () => [coordinates],
     MultiLineString: () => coordinates,
@@ -72,6 +73,23 @@ export function overviewPoint({type, coordinates}) {
     }
   }
   return alongLine(longest, length / 2, distances);
+}
+
+export function mapDisplayFeatures(features, detail) {
+  const districts = [], neighborhoods = [], places = [];
+  for (const feature of features) {
+    if (feature.properties.kind === 'area') {
+      if (feature.properties.areaId?.startsWith('stadtteil:')) neighborhoods.push(feature);
+      else districts.push(feature);
+    } else if (detail) {
+      places.push(feature);
+    } else {
+      const coordinates = overviewPoint(feature.geometry);
+      if (coordinates) places.push({...feature, geometry:{type:'Point',coordinates}});
+    }
+  }
+  // Canvas sends the click to the topmost hit, so draw the most specific locations last.
+  return [...districts, ...neighborhoods, ...places];
 }
 
 // The current filter determines the colour ramp for each level, using the

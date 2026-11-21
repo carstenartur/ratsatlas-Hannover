@@ -1,0 +1,611 @@
+{
+  "totals": {
+    "addedGeometryCount": 1238,
+    "addedRecordCount": 6526,
+    "areaOnlyRecordCount": 2469,
+    "byAccuracy": {
+      "Adresspunkt der genannten Spanne": 20,
+      "Hauskoordinate": 321,
+      "Kreuzungsbereich aus Straßenachsen": 183,
+      "Nur Stadtbezirk bekannt": 1953,
+      "Nur Stadtteil bekannt": 516,
+      "Projektstandort": 19,
+      "Straßenverlauf zur Orientierung": 3514
+    },
+    "byMethod": {
+      "Amtlich belegter Projektstandort": 19,
+      "Amtliche Adresspunkte der im Titel genannten Spanne": 20,
+      "Amtliche Hauskoordinate zum Vorgangstitel": 288,
+      "Amtliche Hauskoordinate zum belegten Projekt im Dokument": 33,
+      "Amtliche Straßenachse zum Vorgangstitel": 3514,
+      "Amtliches Gebiet aus ausdrücklicher Titelangabe": 2469,
+      "Schnitt amtlicher Straßenachsen zum Vorgangstitel": 183
+    },
+    "geometryCount": 4633,
+    "levelCounts": {
+      "city": {
+        "mapped": 14495,
+        "records": 95535
+      },
+      "region": {
+        "mapped": 35,
+        "records": 14055
+      },
+      "state": {
+        "mapped": 0,
+        "records": 15
+      }
+    },
+    "mappedRecordCount": 14530,
+    "originalMappedRecordCount": 8004,
+    "recordCount": 109605
+  },
+  "previousMapped": 9502,
+  "netGain": 5028,
+  "newlyMapped": 5133,
+  "removedAdditions": 105,
+  "unlocated": 95075,
+  "unlocatedWithOriginalLabels": 7620,
+  "mappedOutsideCityAreas": 6,
+  "removedRecords": [
+    {
+      "id": "hannover-sim:0410-2006",
+      "title": "Verlagerung der Grundschule Kreuzriede an den Standort Entenfangweg und Folgemaßnahmen"
+    },
+    {
+      "id": "hannover-sim:0549-2003",
+      "title": "Bebauungsplan Nr. 1627, Portlandstraße 2. Auslegungsbeschluss"
+    },
+    {
+      "id": "hannover-sim:1273-2020",
+      "title": "Information zur geplanten Neugründung einer zusätzlichen Grundschule am Standort Nackenberger Straße und damit verbundene Auswirkungen"
+    },
+    {
+      "id": "hannover-sim:1482-2013",
+      "title": "Ausbau Lohweg; 2. Bauabschnitt"
+    },
+    {
+      "id": "hannover-sim:15-0063-2018",
+      "title": "Baumfällungen am 08.11.2017 in der Gretelriede Höhe Statiusweg"
+    },
+    {
+      "id": "hannover-sim:15-0063-2018F1",
+      "title": "Antwort der Verwaltung auf die Anfrage Baumfällungen am 08.11.2017 in der Gretelriede Höhe Statiusweg Sitzung des Stadtbezirksrates Herrenhausen Stöcken am 24.01.2018 TOP 9.5.1."
+    },
+    {
+      "id": "hannover-sim:15-0153-2017",
+      "title": "Rotmarkierung Radweg Berckhusenstraße Kurve Helstorferstraße"
+    },
+    {
+      "id": "hannover-sim:15-0153-2017S1",
+      "title": "ENTSCHEIDUNG: Rotmarkierung Radweg Berckhusenstraße Kurve Helstorferstraße Sitzung des Stadtbezirksrates Buchholz-Kleefeld am 02.02.2017 TOP 9.2.1."
+    },
+    {
+      "id": "hannover-sim:15-0179-2013F1",
+      "title": "Antwort der Verwaltung auf die Anfrage der SPD-Fraktion zu Inklusiven Krippen- und Kita-Plätzen in der Röntgenstraße und im Karl-Immoff-Weg Sitzung des Stadtbezirksrates Vahrenwald-List am 11.02.2013, TOP 10.1.1."
+    },
+    {
+      "id": "hannover-sim:15-0338-2003",
+      "title": "Zu kleine stadteinwärts führende Bushaltestelle an der Stelinger Straße (Schwarze Heide)"
+    },
+    {
+      "id": "hannover-sim:15-0418-2004",
+      "title": "Ausstattung der Fußgängerampel in der Brabeckstraße -Höhe Jakobistraße- mit einem akustischen Signakgeber"
+    },
+    {
+      "id": "hannover-sim:15-0419-2004",
+      "title": "Neuregelung der Ampelschaltung in der Brabeckstraße auf Höhe der Straße \"Am Gutspark\""
+    },
+    {
+      "id": "hannover-sim:15-0419-2004S1",
+      "title": "ENTSCHEIDUNG: Neuregelung der Ampelschaltung in der Brabeckstraße auf Höhe der Straße \"Am Gutspark\""
+    },
+    {
+      "id": "hannover-sim:15-0495-2019S1",
+      "title": "Instandsetzung der Grundstücksmauer der Helene-Lange-Schule in der Falkenstraße Sitzung des Stadtbezirksrates Linden-Limmer am 27.02.2019 TOP 7.2.1."
+    },
+    {
+      "id": "hannover-sim:15-0503-2016",
+      "title": "Baumfällung/en in der Menschingstr. – ehem. TiHo-Sportplatz"
+    },
+    {
+      "id": "hannover-sim:15-0503-2016F1",
+      "title": "Antwort der Verwaltung auf die Anfrage Baumfällung/en in der Menschingstr. – ehem. TiHo-Sportplatz Sitzung des Stadtbezirksrates Südstadt-Bult am 16.03.2016 TOP 5.1.4."
+    },
+    {
+      "id": "hannover-sim:15-0546-2014",
+      "title": "Ausbau Sallstraße Bereich \"Schmuckplatz\""
+    },
+    {
+      "id": "hannover-sim:15-0546-2014F1",
+      "title": "Antwort der Verwaltung auf die Anfrage Ausbau Sallstraße Bereich \"Schmuckplatz\" Sitzung des Stadtbezirksrates Südstadt-Bult am 19.03.2014 TOP 6.3.2."
+    },
+    {
+      "id": "hannover-sim:15-0644-2012S1",
+      "title": "Sicherheit auf dem Schulweg zur Albert-Schweitzer-Schule am Westschnellweg Sitzung des Stadtbezirksrates Linden-Limmer am 21.03.2012 TOP 8.3.2."
+    },
+    {
+      "id": "hannover-sim:15-0656-2019",
+      "title": "„Modell Schwarzer Bär“ für sanierungsbedürftige Häuser in der Querstraße"
+    },
+    {
+      "id": "hannover-sim:15-0656-2019F1",
+      "title": "Antwort der Verwaltung auf die Anfrage „Modell Schwarzer Bär“ für sanierungsbedürftige Häuser in der Querstraße Sitzung des Stadtbezirksrates Döhren-Wülfel am 14.03.2019 TOP 8.3.1."
+    },
+    {
+      "id": "hannover-sim:15-0662-2020",
+      "title": "Gehweg Altenbekener Damm in einem Teilabschnitt wieder passierbar machen"
+    },
+    {
+      "id": "hannover-sim:15-0662-2020S1",
+      "title": "Gehweg Altenbekener Damm in einem Teilabschnitt wieder passierbar machen Sitzung des Stadtbezirksrates Südstadt-Bult am 13.05.2020 TOP 10.3.3."
+    },
+    {
+      "id": "hannover-sim:15-0673-2022",
+      "title": "Baustelle an der Hermann-Ehlers-Allee und damit verbundene veränderte Ampelschaltung"
+    },
+    {
+      "id": "hannover-sim:15-0673-2022F1",
+      "title": "Antwort der Verwaltung auf die Anfrage Baustelle an der Hermann-Ehlers-Allee und damit verbundene veränderte Ampelschaltung Sitzung des Stadtbezirksrates Ahlem-Badenstedt-Davenstedt am 17.03.2022 TOP 9.4.1."
+    },
+    {
+      "id": "hannover-sim:15-0674-2001S1",
+      "title": "ENTSCHEIDUNG: Parallele Radwegverbindung zur Lister Meile, Anbindung am Lister Platz"
+    },
+    {
+      "id": "hannover-sim:15-0677-2017",
+      "title": "Akustische Signalgeber für die Ampelanlagen an der Heisterbergallee zur Stadtbahnhaltestelle Ehrhartstraße Linie 10"
+    },
+    {
+      "id": "hannover-sim:15-0677-2017S1",
+      "title": "ENTSCHEIDUNG: Akustische Signalgeber für die Ampelanlagen an der Heisterbergallee zur Stadtbahnhaltestelle Ehrhartstraße Linie 10 Sitzung des Stadtbezirksrates Ahlem-Badenstedt-Davenstedt am 23.03.2017 - TOP 9.2.2."
+    },
+    {
+      "id": "hannover-sim:15-0712-2002",
+      "title": "Verkehrsberuhigung Tempelhofweg und Bahnriehe"
+    },
+    {
+      "id": "hannover-sim:15-0809-2019",
+      "title": "Ausbau Geh- und Radwege an der Fössestraße und \"Zur Schwanenburg\""
+    },
+    {
+      "id": "hannover-sim:15-0809-2019S1",
+      "title": "Ausbau Geh- und Radwege an der Fössestraße und \"Zur Schwanenburg\" Sitzung des Stadtbezirksrates Linden-Limmer am 27.03.2019 TOP 6.3.1."
+    },
+    {
+      "id": "hannover-sim:15-0833-2007",
+      "title": "Grundstück - Langenforther Straße – An den Hilligenwöhren"
+    },
+    {
+      "id": "hannover-sim:15-0960-2025F1",
+      "title": "Antwort der Verwaltung auf die Anfrage Grundschule Am Goetheplatz Sitzung des Stadtbezirksrates Mitte am 19.05.2025 TOP 9.1.1."
+    },
+    {
+      "id": "hannover-sim:15-1037-2017",
+      "title": "Neuverlegung Betonplatten Gehweg Bergfeldstraße - Am Sauerwinkel"
+    },
+    {
+      "id": "hannover-sim:15-1037-2017N1",
+      "title": "Neuverlegung Betonplatten Gehweg Bergfeldstraße - Am Sauerwinkel"
+    },
+    {
+      "id": "hannover-sim:15-1037-2017N1S1",
+      "title": "Neuverlegung Betonplatten Gehweg Bergfeldstraße - Am Sauerwinkel Sitzung des Stadtbezirksrates Ricklingen am 11.05.2017 TOP 8.4.6.1."
+    },
+    {
+      "id": "hannover-sim:15-1091-2022",
+      "title": "Entsiegelung an der Walderseestraße und Erneuerung von Rad- und Fußweg"
+    },
+    {
+      "id": "hannover-sim:15-1091-2022S1",
+      "title": "ENTSCHEIDUNG: Entsiegelung an der Walderseestraße und Erneuerung von Rad- und Fußweg Sitzung des Stadtbezirksrates Buchholz-Kleefeld am 12.05.2022 TOP 11.3.2."
+    },
+    {
+      "id": "hannover-sim:15-1096-2009F1",
+      "title": "Antwort der Verwaltung auf die Anfrage Spielplatz im Grenzweg (Contispielplatz), Sitzung des Stadtbezirksrates Vahrenwald-List am 25.05.2009, TOP 9.1.1."
+    },
+    {
+      "id": "hannover-sim:15-1126-2022",
+      "title": "Sanierung Radweg Körtingsdorfer Weg - Am Ihlpohl"
+    },
+    {
+      "id": "hannover-sim:15-1126-2022S1",
+      "title": "Sanierung Radweg Körtingsdorfer Weg - Am Ihlpohl Sitzung des Stadtbezirksrates Ahlem-Badenstedt-Davenstedt am 12.05.2022 TOP 8.3.4."
+    },
+    {
+      "id": "hannover-sim:15-1188-2010",
+      "title": "Entfernung von Betonpfeilern am Gehweg Mansfeldstraße - Vogelsang"
+    },
+    {
+      "id": "hannover-sim:15-1188-2010S1",
+      "title": "Entfernung von Betonpfeilern am Gehweg Mansfeldstraße - Vogelsang Sitzung des Stadtbezirksrates Ricklingen am 10.06.2010 TOP 6.2.2."
+    },
+    {
+      "id": "hannover-sim:15-1288-2022",
+      "title": "Mehr Sicherheit für Fahrradfahrer*innen und Fußgänger*innen auf der Wunstorfer Straße im Bereich der Kanalbrücke"
+    },
+    {
+      "id": "hannover-sim:15-1288-2022S1",
+      "title": "Mehr Sicherheit für Fahrradfahrer*innen und Fußgänger*innen auf der Wunstorfer Straße im Bereich der Kanalbrücke Sitzung des Stadtbezirksrates Linden-Limmer am 18.05.2022 TOP 7.4.1."
+    },
+    {
+      "id": "hannover-sim:15-1299-2019",
+      "title": "Aufstellung von Bänken an der Garbsener Landstrasse und entlang des Fuß- und Radweges in der Leineaue"
+    },
+    {
+      "id": "hannover-sim:15-1299-2019N1",
+      "title": "Aufstellung von Bänken an der Garbsener Landstrasse und entlang des Fuß- und Radweges in der Leineaue"
+    },
+    {
+      "id": "hannover-sim:15-1299-2019N1S1",
+      "title": "Aufstellung von Bänken an der Garbsener Landstrasse und entlang des Fuß- und Radweges in der Leineaue Sitzung des Stadtbezirksrates Herrenhausen Stöcken am 22.05.2019 TOP 8.2.2.1."
+    },
+    {
+      "id": "hannover-sim:15-1309-2021",
+      "title": "Bedarfsampel in der Lenther Chaussee in Höhe der Bushaltestelle Sternheimweg installieren"
+    },
+    {
+      "id": "hannover-sim:15-1309-2021S1",
+      "title": "Bedarfsampel in der Lenther Chaussee in Höhe der Bushaltestelle Sternheimweg installieren Sitzung des Stadtbezirksrates Ahlem-Badenstedt-Davenstedt am 11.06.2021 TOP 7.2.1."
+    },
+    {
+      "id": "hannover-sim:15-1310-2005",
+      "title": "Verlegung des Schulcontainers von der Schule am Entenfangweg zur Grundschule \"Am Stöckener Bach\""
+    },
+    {
+      "id": "hannover-sim:15-1332-2010",
+      "title": "Radweg an der Ritter-Brüning-Straße (entlang der Humboldt-Schule bis Fischerhof)"
+    },
+    {
+      "id": "hannover-sim:15-1332-2010S1",
+      "title": "Radweg an der Ritter-Brüning-Straße (entlang der Humboldt-Schule bis Fischerhof) Sitzung des Stadtbezirksrates Linden-Limmer am 23.06.2010 TOP 6.1.4."
+    },
+    {
+      "id": "hannover-sim:15-1367-2021",
+      "title": "Verlegung der Altglascontainer an der Lange-Feld-Straße höhe Spielplatz"
+    },
+    {
+      "id": "hannover-sim:15-1452-2025",
+      "title": "Querungshilfe Groß-Buchholzer Kirchweg: Zu der Entscheidung 15-2129/2024 S1 in Verbindung mit der Entscheidung 15-0478/2025 S1 (Querungshilfe Osterfelddamm-GDA)"
+    },
+    {
+      "id": "hannover-sim:15-1452-2025F1",
+      "title": "Antwort der Verwaltung auf die Anfrage Querungshilfe Groß-Buchholzer Kirchweg: Zu der Entscheidung 15-2129/2024 S1 in Verbindung mit der Entscheidung 15-0478/2025 S1 (Querungshilfe Osterfelddamm-GDA) Sitzung des Stadtbezirksrates Buchholz-Kleefeld am 21.08.2025 TOP 12.1.2."
+    },
+    {
+      "id": "hannover-sim:15-1520-2017",
+      "title": "Parkverbot in der Gartenheimstrasse in Höhe des Eingangsbereichs der Grundschule Gartenheimstrasse"
+    },
+    {
+      "id": "hannover-sim:15-1528-2017F1",
+      "title": "Antwort der Verwaltung auf die Anfrage Gehwegabschnitt in der Stresemannallee Sitzung des Stadtbezirksrates Südstadt-Bult am 14.06.2017 TOP 5.3.1."
+    },
+    {
+      "id": "hannover-sim:15-1566-2024",
+      "title": "Werbetafeln am Engelbosteler Damm, Höhe Haltestelle Kopernikusstraße"
+    },
+    {
+      "id": "hannover-sim:15-1566-2024S1",
+      "title": "Werbetafeln am Engelbosteler Damm, Höhe Haltestelle Kopernikusstraße Sitzung des Stadtbezirksrates Nord am 26.08.2024 TOP 11.1.2."
+    },
+    {
+      "id": "hannover-sim:15-1648-2023",
+      "title": "Überprüfung der Radfahrstreifen in der Empelder Straße und Durchfahrtverbot für schwere LKW"
+    },
+    {
+      "id": "hannover-sim:15-1690-2013",
+      "title": "Akustische Signalgeber an der Ampel Ritter-Brüning-Str./Höhe Auestr."
+    },
+    {
+      "id": "hannover-sim:15-1690-2013S1",
+      "title": "Akustische Signalgeber an der Ampel Ritter-Brüning-Str./Höhe Auestr. Sitzung des Stadtbezirksrates Linden-Limmer am 28.08.2013 TOP 12.3.1."
+    },
+    {
+      "id": "hannover-sim:15-1720-2010F1",
+      "title": "Antwort der Verwaltung auf die Anfrage: Verkehrssicherheit vor künftiger Grundschule in der Stresemannallee Sitzung des Stadtbezirksrates Südstadt-Bult am 15.09.2010, TOP 5.1.1."
+    },
+    {
+      "id": "hannover-sim:15-1733-2020",
+      "title": "Neugebauter Radweg Hoher Weg Schleichweg für Lieferverkehr und ortskundige Autofahrer*innen?"
+    },
+    {
+      "id": "hannover-sim:15-1733-2020F1",
+      "title": "Antwort der Verwaltung auf die Anfrage Neugebauter Radweg Hoher Weg Schleichweg für Lieferverkehr und ortskundige Autofahrer*innen? Sitzung des Stadtbezirksrates Döhren-Wülfel am 10.09.2020 TOP 6.1.3."
+    },
+    {
+      "id": "hannover-sim:15-1809-2011S1",
+      "title": "Fußgängerüberweg in der Glockseestraße zum Kinderspielplatz Sitzung des Stadtbezirksrates Mitte am 26.09.2011 TOP 8.3.3."
+    },
+    {
+      "id": "hannover-sim:15-1841-2014",
+      "title": "Ausbau Sallstraße - Wiederherstellung Haltestellenunterstell- und sitzmöglichkeiten an der üstra-Haltestelle Lutherstraße"
+    },
+    {
+      "id": "hannover-sim:15-1841-2014F1",
+      "title": "Antwort der Verwaltung auf die Anfrage Ausbau Sallstraße - Wiederherstellung Haltestellenunterstell- und sitzmöglichkeiten an der üstra-Haltestelle Lutherstraße Sitzung des Stadtbezirksrates Südstadt-Bult am 17.09.2014 TOP 5.3.1."
+    },
+    {
+      "id": "hannover-sim:15-1861-2024",
+      "title": "Ampelsteuerung für Radfahrer in der Lister Straße bei Querung der Waldstraße"
+    },
+    {
+      "id": "hannover-sim:15-1861-2024S1",
+      "title": "Entscheidung zum Antrag der SPD-Fraktion Ampelsteuerung für Radfahrer in der Lister Straße bei Querung der Waldstraße Sitzung des Stadtbezirksrates Vahrenwald-List am 30.09.2024 TOP 9.3.1."
+    },
+    {
+      "id": "hannover-sim:15-1875-2009",
+      "title": "Absenkung der westlichen Bordsteinkante des Wilmersdorfweges in Höhe Heinersdorfweg für einen Radweganschluss an den parallel zum Wietzegraben verlaufenden Trampelpfad sowie Herrichtung dieses in nördlicher Richtung verlaufenden Pfades für Fußgänger und Radfahrer"
+    },
+    {
+      "id": "hannover-sim:15-1875-2009N1",
+      "title": "Absenkung der westlichen Bordsteinkante des Wilmersdorfweges in Höhe Heinersdorfweg für einen Radweganschluss an den parallel zum Wietzegraben verlaufenden Trampelpfad sowie Herrichtung dieses in nördlicher Richtung verlaufenden Pfades für Fußgänger und Radfahrer"
+    },
+    {
+      "id": "hannover-sim:15-1875-2009N1S1",
+      "title": "Absenkung der westlichen Bordsteinkante des Wilmersdorfweges in Höhe Heinersdorfweg für einen Radweganschluss an den parallel zum Wietzegraben verlaufenden Trampelpfad sowie Herrichtung dieses in nördlicher Richtung verlaufenden Pfades für Fußgänger und Radfahrer Sitzung des Stadtbezirksrates Bothfeld-Vahrenheide am 16.09.2009 TOP 8.3.1.1."
+    },
+    {
+      "id": "hannover-sim:15-1928-2008",
+      "title": "Einrichten eines Zebrastreifens in der Peiner Straße im Bereich der Bushaltestelle Holthusenstraße"
+    },
+    {
+      "id": "hannover-sim:15-2007-2021",
+      "title": "Fußgängerüberwege Im Heidkampe Höhe Uslarplatz"
+    },
+    {
+      "id": "hannover-sim:15-2007-2021N1",
+      "title": "Fußgängerüberwege Im Heidkampe Höhe Uslarplatz"
+    },
+    {
+      "id": "hannover-sim:15-2007-2021N1S1",
+      "title": "Fußgängerüberwege Im Heidkampe Höhe Uslarplatz Sitzung des Stadtbezirksrates Bothfeld-Vahrenheide am 22.09.2021 TOP 7.5.1.1."
+    },
+    {
+      "id": "hannover-sim:15-2063-2005",
+      "title": "Fußgängerdruckampel auf der Straße Am Fuhrenkampe Höhe Immelmannstraße"
+    },
+    {
+      "id": "hannover-sim:15-2063-2005S1",
+      "title": "ENTSCHEIDUNG: Fußgängerdruckampel auf der Straße Am Fuhrenkampe Höhe Immelmannstraße"
+    },
+    {
+      "id": "hannover-sim:15-2077-2002",
+      "title": "Nahverkehrsplan 1.) Umbau des Hochbahnsteiges \"Vier Grenzen\" 2.) Präzisierung der Zeitschiene für die Maßnahmen \"Ausbau Podbielskistrasse\"; Änderungsantrag der SPD - Fraktion"
+    },
+    {
+      "id": "hannover-sim:15-2192-2005",
+      "title": "Änderungsantrag zur DS 15-2063/2005 \"Fußgängerdruckampel auf der Straße Am Fuhrenkampe Höhe Immelmannstraße"
+    },
+    {
+      "id": "hannover-sim:15-2239-2023",
+      "title": "Verkehrsberuhigung für den Teilabschnitt der Straße „Godshorner Damm“ im Bereich „Alt-Vinnhorst“ bis „Grashöfe“"
+    },
+    {
+      "id": "hannover-sim:15-2239-2023S1",
+      "title": "Verkehrsberuhigung für den Teilabschnitt der Straße „Godshorner Damm“ im Bereich „Alt-Vinnhorst“ bis „Grashöfe“ Sitzung des Stadtbezirksrates Nord am 13.11.2023 TOP 7.2.1."
+    },
+    {
+      "id": "hannover-sim:15-2262-2003",
+      "title": "Sanierung der Straße Rübezahlplatz und Umbau der Straße Hohe Linde"
+    },
+    {
+      "id": "hannover-sim:15-2339-2012",
+      "title": "Ausbau Göttinger Chaussee und Umgestaltung der Nebenanlagen"
+    },
+    {
+      "id": "hannover-sim:15-2339-2012N1",
+      "title": "Ausbau Göttinger Chaussee und Umgestaltung der Nebenanlagen"
+    },
+    {
+      "id": "hannover-sim:15-2339-2012N1S1",
+      "title": "Ausbau Göttinger Chaussee und Umgestaltung der Nebenanlagen Sitzung des Stadtbezirksrates Ricklingen am 01.11.2012"
+    },
+    {
+      "id": "hannover-sim:15-2377-2018S1",
+      "title": "Verkehrsberuhigung in der Adolfinenstraße und Am Kalkbruche Sitzung des Stadtbezirksrates Ahlem-Badenstedt-Davenstedt am 01.11.2018 TOP 6.1.1."
+    },
+    {
+      "id": "hannover-sim:15-2508-2008",
+      "title": "Fußgänger-Schutzinsel in der Wülfeler Str. Höhe Schwarze Worth"
+    },
+    {
+      "id": "hannover-sim:15-2508-2008F1",
+      "title": "Antwort der Verwaltung auf die Anfrage Fußgänger-Schutzinsel in der Wülfeler Str. Höhe Schwarze Worth Sitzung des Stadtbezirksrates Kirchrode-Bemerode-Wülferode am 12.11.2008 TOP 8.2.1."
+    },
+    {
+      "id": "hannover-sim:15-2590-2020",
+      "title": "Parkverbot in der Voltmerstraße und Durchfahrtsperre für LKW ab 7,5 t"
+    },
+    {
+      "id": "hannover-sim:15-2590-2020N1",
+      "title": "Parkverbot in der Voltmerstraße und Durchfahrtsperre für LKW ab 7,5 t"
+    },
+    {
+      "id": "hannover-sim:15-2590-2020N1S1",
+      "title": "Parkverbot in der Voltmerstraße und Durchfahrtsperre für LKW ab 7,5 t Sitzung des Stadtbezirksrates Nord am 16.11.2020 TOP 8.2.3."
+    },
+    {
+      "id": "hannover-sim:15-2884-2002",
+      "title": "Verbesserung der Stell- bzw. Parkplatzsituation in der Spichernstraße und deren Umgebung"
+    },
+    {
+      "id": "hannover-sim:15-2884-2002S1",
+      "title": "ENTSCHEIDUNG: Verbesserung der Stell- bzw. Parkplatzsituation in der Spichernstraße und deren Umgebung"
+    },
+    {
+      "id": "hannover-sim:15-3110-2019",
+      "title": "Rote Markierung für kreuzenden Radweg Thurnithistraße – An der Wollebahn"
+    },
+    {
+      "id": "hannover-sim:15-3110-2019N1",
+      "title": "Rote Markierung für kreuzenden Radweg Thurnithistraße – An der Wollebahn"
+    },
+    {
+      "id": "hannover-sim:15-3110-2019N1S1",
+      "title": "Rote Markierung für kreuzenden Radweg Thurnithistraße – An der Wollebahn Sitzung des Stadtbezirksrates Döhren-Wülfel am 12.12.2019 TOP 7.2.3.1."
+    },
+    {
+      "id": "hannover-sim:2525-2004",
+      "title": "Gemeinsamer Antrag von der SPD-Fraktion und Bündnis 90/Die Grünen zur Verkehrsberuhigung in der Voßstraße"
+    },
+    {
+      "id": "hannover-sim:2525-2004S1",
+      "title": "Gemeinsamer Antrag von der SPD-Fraktion und Bündnis 90/Die Grünen zur Verkehrsberuhigung in der Voßstraße"
+    },
+    {
+      "id": "hannover-sim:2791-2007",
+      "title": "Änderungsantrag der SPD-Fraktion und Fraktion Bündnis 90/Die Grünen zur Drucks. Nr. 2138/2007, Grundschule am Goetheplatz"
+    },
+    {
+      "id": "hannover-sim:2791-2007N1",
+      "title": "Änderungsantrag der SPD-Fraktion und Fraktion Bündnis 90/Die Grünen zur Drucks. Nr. 1664/2007, Grundschule am Goetheplatz"
+    },
+    {
+      "id": "hannover-sim:2853-2015",
+      "title": "Gymnasium Goetheschule – Gesamtsanierung und Erweiterung 2. Bauabschnitt: Sanierung und Erweiterung des Gebäudes am Standort Franziusweg auf fünf Züge unter Berücksichtigung der Anforderungen aus G 9, Ganztagsbetrieb und Inklusion"
+    },
+    {
+      "id": "hannover-sim:H-0131-2021",
+      "title": "Teilhaushalt: Teilhaushalt: Wirtschaftsplan Stadtentwässerung, 3.03. Betriebsbauten, Öffentliche Toilettenanlagen, Sanierung der Toilettenanlage am Moltkeplatz und Umgestaltung in einen Gastronomiebetrieb"
+    }
+  ],
+  "derivedSha256": {
+    "additions": "d7329bb0d3d96a6c2f202145311d48481f88bbdd5299c83fa13ac89fb6b47c98",
+    "geography": "75609cde9ec0b280a041de902df5d32a54de2f02fe1a77629044fe7fabf62909",
+    "map": "06b25dad949ec608516db386b1ca6b1759c53eeef9bc2f413a809fc932934d8c",
+    "searchIndex": "f44fc1870709815a27553104e3cfc6fa24cd760511f9935c886ad94599dc0a75"
+  },
+  "sourceGeneration": "23e2e6b3f2b0bed02956caf3e8446cb23943e75147be6060cf230dcc4a644ca0",
+  "sourceManifestSha256": "74876909cb613d075659862448bd7178c9c5042298c57ee5e33b8bdad116fb5f",
+  "examples": {
+    "hannover-sim:15-0139-2008": {
+      "title": "Grunderneuerung der Eckermannstraße in Kleefeld; Zusatzantrag",
+      "locations": [
+        {
+          "id": "atlas-location:a3b63f5d26e62bf602a68a1e46ed698e1961e54f3ce503e0a0768663db40aca0",
+          "geometryId": "atlas:555d833139127c2db99ba26fd09b6b4c94d2dd72bee677455c3a9747eaa854f4",
+          "label": "Eckermannstraße",
+          "kind": "street",
+          "mapped": true,
+          "accuracy": "Straßenverlauf zur Orientierung",
+          "evidence": {
+            "source": "title",
+            "text": "Grunderneuerung der Eckermannstraße in Kleefeld; Zusatzantrag",
+            "url": "https://e-government.hannover-stadt.de/lhhsimwebre.nsf/DS/15-0139-2008"
+          },
+          "method": "Amtliche Straßenachse zum Vorgangstitel",
+          "sourceUrl": "https://numis.niedersachsen.de/trefferanzeige?docuuid=121cf327-48f5-4ecd-b3db-aabd023eb3df",
+          "attribution": "LGLN (2026), ATKIS Basis-DLM (CC BY 4.0), bearbeitet"
+        }
+      ]
+    },
+    "hannover-sim:0655-2018": {
+      "title": "Erweiterung und Umstrukturierung der 2-gruppigen Kita \"Knirpse\", Sven-Hedin-Str. 7",
+      "locations": [
+        {
+          "id": "atlas-location:ebe66c15b485a6afa98f9d53eaeaefb4b8803bfa3fa9b48865cfe4ef6ac9f9f2",
+          "geometryId": "atlas:419e7081f44fd0cce139ffc593fcba1543059e89f5d4215be580617cd8ed48bc",
+          "label": "Sven-Hedin-Straße 7",
+          "kind": "address",
+          "mapped": true,
+          "accuracy": "Hauskoordinate",
+          "evidence": {
+            "source": "title",
+            "text": "Erweiterung und Umstrukturierung der 2-gruppigen Kita \"Knirpse\", Sven-Hedin-Str. 7",
+            "url": "https://e-government.hannover-stadt.de/lhhsimwebre.nsf/DS/0655-2018"
+          },
+          "method": "Amtliche Hauskoordinate zum Vorgangstitel",
+          "sourceUrl": "https://numis.niedersachsen.de/trefferanzeige?docuuid=931577a7-6b51-42fc-8409-3431f50abb4c",
+          "attribution": "LGLN (2026), INSPIRE Hauskoordinaten aus ALKIS (CC BY 4.0), bearbeitet"
+        }
+      ]
+    },
+    "hannover-sim:0874-2023": {
+      "title": "Umstrukturierung einer Kindergartengruppe in der Kindertagesstätte \"Twipsy\"",
+      "locations": [
+        {
+          "id": "atlas-location:23341054987f67cbe3804c368deddd5ffa6c4674bd449204b6f479e01e409708",
+          "geometryId": "atlas:ad852b287bdd539ea895ba3483a9469dfe966bc8e1be46f69011da3b1fd71941",
+          "label": "Ortskamp 89",
+          "kind": "address",
+          "mapped": true,
+          "accuracy": "Hauskoordinate",
+          "evidence": {
+            "source": "document",
+            "text": "kindertagesstätte \" twipsy\" ortskamp 89",
+            "url": "https://e-government.hannover-stadt.de/lhhsimwebre.nsf/DS/0874-2023",
+            "note": "Ortsbeleg in vereinheitlichter Schreibweise"
+          },
+          "method": "Amtliche Hauskoordinate zum belegten Projekt im Dokument",
+          "sourceUrl": "https://numis.niedersachsen.de/trefferanzeige?docuuid=931577a7-6b51-42fc-8409-3431f50abb4c",
+          "attribution": "LGLN (2026), INSPIRE Hauskoordinaten aus ALKIS (CC BY 4.0), bearbeitet"
+        }
+      ]
+    },
+    "hannover-sim:15-0423-2018": {
+      "title": "Sturmschaden - Ampel Kreuzung Göttinger Chaussee - Bückeburger Allee",
+      "locations": [
+        {
+          "id": "atlas-location:24aaff51a6c91e55da5fd2041faceb130fd6187130931c15e7015a5b2d7341e0",
+          "geometryId": "atlas:7e292b7371d5fa10de47944ea484db4d88d9fc25d4e0f52aa1c8f89dcd8f909b",
+          "label": "Bückeburger Allee / Göttinger Chaussee",
+          "kind": "crossing",
+          "mapped": true,
+          "accuracy": "Kreuzungsbereich aus Straßenachsen",
+          "evidence": {
+            "source": "title",
+            "text": "Sturmschaden - Ampel Kreuzung Göttinger Chaussee - Bückeburger Allee",
+            "url": "https://e-government.hannover-stadt.de/lhhsimwebre.nsf/DS/15-0423-2018"
+          },
+          "method": "Schnitt amtlicher Straßenachsen zum Vorgangstitel",
+          "sourceUrl": "https://numis.niedersachsen.de/trefferanzeige?docuuid=121cf327-48f5-4ecd-b3db-aabd023eb3df",
+          "attribution": "LGLN (2026), ATKIS Basis-DLM (CC BY 4.0), bearbeitet"
+        }
+      ]
+    },
+    "hannover-sim:15-1375-2023": {
+      "title": "Einsatz des Ordnungsdienstes im Stadtbezirk Linden-Limmer",
+      "locations": [
+        {
+          "id": "atlas-location:ec9c40cedb10af6457315ed6633df8bc5f1b7a3231bde0c78c8f092918628ad3",
+          "geometryId": "atlas:080d2d9e4e396af47bded089d47aa2e97110473aa2c42f1f811a278b2945bc4f",
+          "label": "Stadtbezirk Linden-Limmer",
+          "kind": "area",
+          "mapped": true,
+          "accuracy": "Nur Stadtbezirk bekannt",
+          "evidence": {
+            "source": "title",
+            "text": "Einsatz des Ordnungsdienstes im Stadtbezirk Linden-Limmer",
+            "url": "https://e-government.hannover-stadt.de/lhhsimwebre.nsf/DS/15-1375-2023"
+          },
+          "method": "Amtliches Gebiet aus ausdrücklicher Titelangabe",
+          "sourceUrl": "https://www.hannover.de/Leben-in-der-Region-Hannover/Verwaltungen-Kommunen/Die-Verwaltung-der-Landeshauptstadt-Hannover/Dezernate-und-Fachbereiche-der-LHH/Stadtentwicklung-und-Bauen/Fachbereich-Planen-und-Stadtentwicklung/Geoinformation/Open-GeoData/Themenkarten-und-statistische-Gliederung/Statistische-Gliederungen/Statistische-Gliederung-SKH5",
+          "attribution": "Datenquelle: CC-BY-4.0 – Bereich Geoinformation – LH Hannover",
+          "areaId": "bezirk:10"
+        }
+      ]
+    },
+    "hannover-sim:15-0143-2023S1": {
+      "title": "Wie verändert sich die Lärmsituation im Stadtteil Ricklingen? Sitzung des Stadtbezirksrates Ricklingen am 02.02.2023 TOP 10.1.4.",
+      "locations": [
+        {
+          "id": "atlas-location:7613dfc69c4dfcaf1f9a0cf228011ab8cc6c429830c5095fa817828a96e5dfbc",
+          "geometryId": "atlas:eb83ce381706d781ff0bc35ea21d38270e3342fbf8cbce0f052a7f9425608441",
+          "label": "Stadtteil Ricklingen",
+          "kind": "area",
+          "mapped": true,
+          "accuracy": "Nur Stadtteil bekannt",
+          "evidence": {
+            "source": "title",
+            "text": "Wie verändert sich die Lärmsituation im Stadtteil Ricklingen? Sitzung des Stadtbezirksrates Ricklingen am 02.02.2023 TOP 10.1.4.",
+            "url": "https://e-government.hannover-stadt.de/lhhsimwebre.nsf/DS/15-0143-2023S1"
+          },
+          "method": "Amtliches Gebiet aus ausdrücklicher Titelangabe",
+          "sourceUrl": "https://www.hannover.de/Leben-in-der-Region-Hannover/Verwaltungen-Kommunen/Die-Verwaltung-der-Landeshauptstadt-Hannover/Dezernate-und-Fachbereiche-der-LHH/Stadtentwicklung-und-Bauen/Fachbereich-Planen-und-Stadtentwicklung/Geoinformation/Open-GeoData/Themenkarten-und-statistische-Gliederung/Statistische-Gliederungen/Statistische-Gliederung-SKH5",
+          "attribution": "Datenquelle: CC-BY-4.0 – Bereich Geoinformation – LH Hannover",
+          "areaId": "stadtteil:40"
+        }
+      ]
+    }
+  }
+}

@@ -410,6 +410,92 @@ try {
   await capture('bumke');
   report.assertions.push('Bumke finds 19 mapped records; choosing 2235/2024 focuses its municipal project location and displays its source');
 
+  for (const [id,searchText,hitCount,type,label,accuracy,screenshot] of [
+    ['hannover-sim:15-0139-2008','15-0139/2008',3,'LineString','Eckermannstraße','Straßenverlauf zur Orientierung','new-street'],
+    ['hannover-sim:0874-2023','0874/2023',1,'Point','Ortskamp 89','Hauskoordinate','new-project-address'],
+    ['hannover-sim:15-0423-2018','15-0423/2018',2,'MultiPoint','Bückeburger Allee / Göttinger Chaussee','Kreuzungsbereich aus Straßenachsen','new-crossing']
+  ]) {
+    const shape=geometry(enrichedMap,id,type);
+    const points=type==='Point'?[shape.coordinates]:type==='MultiPoint'?shape.coordinates:[shape.coordinates[Math.floor(shape.coordinates.length/2)]];
+    await page.goto(url+'?q='+encodeURIComponent(searchText));
+    await hits(hitCount);
+    await result(id).click();
+    await focusedRecord(id,type==='LineString'?13:16);
+    for (const point of points) await visibleHighlight(point);
+    const evidence=page.locator('#detail .locs li').filter({hasText:label}).filter({hasText:'Im Ratsatlas ergänzt'});
+    assert.ok((await evidence.innerText()).includes(accuracy));
+    await page.getByRole('button',{name:'Auf Karte zeigen',exact:true}).click();
+    for (const point of points) {
+      await visibleHighlight(point);
+      await clickMapAt(point);
+      await page.locator(`.map-popup button[data-record="${id}"]`).waitFor();
+    }
+    await capture(screenshot);
+    report.assertions.push(`New ${accuracy}: list selection focuses, displays evidence and keeps every tested part clickable (${id})`);
+  }
+
+  // Bothfeld and Isernhagen-Süd share a district. Only Bothfeld has a
+  // neighborhood-level record group. Both interior points are clear of markers.
+  await page.goto(url+'?lat=52.42945&lng=9.79625&z=14&fenster=');
+  await hits(totals.recordCount);
+  await mapCount(totals.geometryCount);
+  const areaPopup=page.locator('.map-popup');
+  for (const [coordinate,areaId,label,accuracy] of [
+    [[9.799485,52.418199],'stadtteil:22','Stadtteil Bothfeld','Nur Stadtteil bekannt'],
+    [[9.793014,52.440714],'bezirk:03','Stadtbezirk Bothfeld-Vahrenheide','Nur Stadtbezirk bekannt']
+  ]) {
+    const group=enrichedMap.features.find(f=>f.properties.areaId===areaId).properties;
+    await clickMapAt(coordinate);
+    await areaPopup.getByText(label,{exact:true}).waitFor();
+    await areaPopup.getByText(accuracy,{exact:true}).waitFor();
+    await areaPopup.getByText(group.recordIds.length+' verknüpfte Vorgänge',{exact:true}).waitFor();
+    await areaPopup.locator(`button[data-record="${group.recordIds[0]}"]`).waitFor();
+    await page.locator('#map .leaflet-pan-anim').waitFor({state:'detached'});
+    const close=page.locator('.leaflet-popup-close-button');
+    const closeBox=await close.boundingBox(), navBox=await page.locator('nav.nav').boundingBox();
+    assert.ok(closeBox.y>=navBox.y+navBox.height,'the populated popup close control must clear the navigation');
+    await close.click();
+    // Leaflet keeps a closing popup in the DOM until its fade has finished.
+    await areaPopup.waitFor({state:'detached'});
+  }
+  report.assertions.push('With all locations present, clicks in Bothfeld and Isernhagen-Süd open the separate neighborhood and district record groups with their exact accuracy');
+
+  for (const [id,searchText,areaId,accuracy,screenshot] of [
+    ['hannover-sim:15-1375-2023','15-1375/2023','bezirk:10','Nur Stadtbezirk bekannt','new-district'],
+    ['hannover-sim:15-0143-2023S1','15-0143/2023','stadtteil:40','Nur Stadtteil bekannt','new-neighborhood']
+  ]) {
+    const area=geography.features.find(f=>f.properties.areaId===areaId).properties;
+    const feature=enrichedMap.features.find(f=>f.properties.areaId===areaId&&f.properties.recordIds.includes(id));
+    assert.ok(feature,'missing official area fixture');
+    const initial=new URL(url);
+    initial.search=new URLSearchParams({q:searchText,lat:String(area.labelPoint[1]),lng:String(area.labelPoint[0]),z:'14',fenster:''});
+    await page.goto(initial.href);
+    await hits(2);
+    // A coarse location remains a clickable surface in overview mode. Its
+    // interior must not disappear into a representative point on the border.
+    await clickMapAt(area.labelPoint);
+    await areaPopup.getByText(accuracy,{exact:true}).waitFor();
+    await page.locator(`.map-popup button[data-record="${id}"]`).waitFor();
+    await togglePanel('panel-list');
+    await result(id).click();
+    await focusedRecord(id,10);
+    const ring=feature.geometry.type==='Polygon'?feature.geometry.coordinates[0]:feature.geometry.coordinates[0][0];
+    await visibleHighlight(ring[1]);
+    assert.ok((await page.locator('#detail .locs li').filter({hasText:accuracy}).innerText()).includes('Im Ratsatlas ergänzt'));
+    await capture(screenshot);
+    await areaSelect.selectOption(areaId);
+    await hits(2);
+    if (areaId.startsWith('bezirk:')) {
+      const child=geography.features.find(f=>f.properties.parentId===areaId).properties;
+      await areaSelect.selectOption(child.areaId);
+      await hits(0);
+    } else {
+      await areaSelect.selectOption(area.parentId);
+      await hits(2);
+    }
+    report.assertions.push(`${accuracy}: overview keeps a surface, selection highlights its boundary, and filters respect only the known area (${id})`);
+  }
+
   await page.goto(url+'?q=1047%2F2026&vorgang=hannover-sim%3A1047-2026F1');
   await hits(2);
   await page.locator('#detail [data-related="hannover-sim:1047-2026"]').waitFor();
@@ -506,7 +592,7 @@ try {
   assert.deepEqual(report.requestFailures.filter(r=>r.url.startsWith(url)&&!/ERR_ABORTED|cancelled|canceled|Aborted/i.test(String(r.error))),[]);
   assert.deepEqual([...runtimeRequests.keys()].sort(),[...runtimeAssets].sort(),'runtime asset coverage');
   const releases=new Set([...runtimeRequests.values()].flatMap(values=>[...values]));
-  assert.deepEqual([...releases],['kartenorte-20261121-4'],'runtime files must use the same current cache version');
+  assert.deepEqual([...releases],['kartenorte-20261121-5'],'runtime files must use the same current cache version');
   report.assertions.push('Browser and search worker load one consistently versioned runtime, independent of old unversioned cache entries');
 } catch(error) {
   report.failure=error.message;

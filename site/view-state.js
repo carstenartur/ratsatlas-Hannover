@@ -1,4 +1,4 @@
-import { isoDay } from './search.js?v=kartenorte-20261121-4';
+import { isoDay } from './search.js?v=kartenorte-20261121-5';
 
 export const LEVELS = ['city','region','state'];
 export const PANELS = ['list','detail','timeline'];

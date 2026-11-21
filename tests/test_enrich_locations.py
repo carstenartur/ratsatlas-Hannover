@@ -118,6 +118,158 @@ class LocationEnrichmentTests(unittest.TestCase):
         result = self.outcome(r)
         self.assertEqual(result[2]['records'][r['id']]['locations'][0]['label'], 'Buchholzer Straße 60')
 
+    def test_explicit_location_does_not_depend_on_a_topic_keyword(self):
+        for title, label in [
+            ('Oberflächensanierung in der Stüvestraße', 'Stüvestraße'),
+            ('Geschwindigkeitskontrollen im Bünteweg', 'Bünteweg'),
+            ('Grunderneuerung der Eckermannstraße in Kleefeld; Zusatzantrag', 'Eckermannstraße'),
+            ('Bordsteinabsenkung Mellendorfer Straße', 'Mellendorfer Straße'),
+            ('Fahrradbügel Odeonstraße', 'Odeonstraße'),
+            ('Ampelschaltung Lerchenfeldstraße', 'Lerchenfeldstraße'),
+        ]:
+            with self.subTest(title=title):
+                _, geo, _ = self.outcome(row(title))
+                self.assertEqual([f['properties']['label'] for f in geo['features']], [label])
+                self.assertEqual(geo['features'][0]['properties']['accuracy'], 'Straßenverlauf zur Orientierung')
+
+    def test_complete_official_street_name_survives_grammar_and_unusual_endings(self):
+        for title, label in [
+            ('Sanierung der Alten Stöckener Straße', 'Alte Stöckener Straße'),
+            ('Sanierung der Großen Packhofstraße', 'Große Packhofstraße'),
+            ('Ausbau der Straße In der Rehre', 'In der Rehre'),
+            ('Geschwindigkeitskontrollen in der Straße Am Lindenhofe', 'Am Lindenhofe'),
+        ]:
+            with self.subTest(title=title):
+                _, geo, _ = self.outcome(row(title))
+                self.assertEqual([f['properties']['label'] for f in geo['features']], [label])
+
+    def test_facility_apposition_and_explicit_building_address_have_house_coordinates(self):
+        cases = [
+            ('Erweiterung und Umstrukturierung der 2-gruppigen Kita "Knirpse", Sven-Hedin-Str. 7',
+             'Sven-Hedin-Straße 7', [9.823144, 52.401679]),
+            ('Vorhabenbezogener Bebauungsplan Nr. 1879 - Wohn- und Geschäftshaus Hildesheimer Straße 114 - Einleitungsbeschluss',
+             'Hildesheimer Straße 114', [9.752681, 52.356958]),
+        ]
+        for title, label, point in cases:
+            with self.subTest(title=title):
+                _, geo, _ = self.outcome(row(title))
+                self.assertEqual([(f['properties']['label'], f['geometry']['coordinates']) for f in geo['features']],
+                                 [(label, point)])
+
+    def test_ordinal_and_partial_street_scopes_do_not_become_exact_locations(self):
+        for title in [
+            'Neubau am Engelbosteler Damm 5. Weitere Maßnahmen',
+            'Ausbau der Straße In der Rehre zwischen Bergfeldstraße und Göttinger Chaussee',
+            'Ausbau der Großen Packhofstraße zwischen Osterstraße und Georgstraße',
+            'Sanierung in der Mardalstraße vom Spielplatz bis an den Fußweg',
+            'Kreuzung Hahnenstraße/Callinstraße/Unbekanntstraße',
+            'Kreuzung Hahnenstraße/Callinstraße zwischen zwei Abschnitten',
+            'Kreuzung Hahnenstraße/Callinstraße 12',
+            'Bebauungsplan Hahnenstraße/Callinstraße',
+            'Verkehrsberuhigung Hahnenstraße und Callinstraße',
+            'Übergang Ecke Hahnenstraße/Callinstraße zum Welfengarten',
+        ]:
+            with self.subTest(title=title):
+                self.assertEqual(self.outcome(row(title))[2]['records'], {})
+
+    def test_explicit_crossing_uses_real_axis_intersection(self):
+        title = ('Antwort der Verwaltung auf die Anfrage Verkehrssicherheit Ecke Hahnenstraße/Callinstraße '
+                 'Sitzung des Stadtbezirksrates Nord am 16.12.2019 TOP 7.1.2.')
+        _, geo, _ = self.outcome(row(title))
+        self.assertEqual(len(geo['features']), 1)
+        self.assertEqual(geo['features'][0]['geometry'], dict(type='Point', coordinates=[9.717473, 52.386018]))
+        self.assertEqual(geo['features'][0]['properties']['accuracy'], 'Kreuzungsbereich aus Straßenachsen')
+
+    def test_same_named_facility_in_document_proves_its_address(self):
+        r = row('Umstrukturierung einer Kindergartengruppe in der Kindertagesstätte "Twipsy"')
+        def resolve(text):
+            docs = {r['id']: [dict(kind='address', label='Ortskamp 89',
+                                 evidence=dict(source='document', text=text))]}
+            return self.project(dict(records=[r], generation='t'), dict(features=[], generation='t'),
+                                self.resolver, docs)[2]['records']
+        result = resolve('in der Kindertagesstätte " Twipsy" Ortskamp 89 in 30539 Hannover-Bemerode, '
+                         'eine Kindergartengruppe umzustrukturieren und')
+        self.assertEqual(result[r['id']]['locations'][0]['label'], 'Ortskamp 89')
+        for text in [
+            'in der Kindertagesstätte "Andere Einrichtung" Ortskamp 89 eine Gruppe umzustrukturieren',
+            'Kindertagesstätte "Twipsy", Anschrift des Trägers: Ortskamp 89',
+            'Kindertagesstätte "Twipsy" am bisherigen Standort Ortskamp 89',
+            'Kindertagesstätte "Twipsy" und das Beratungsbüro am Standort Ortskamp 89',
+        ]:
+            with self.subTest(text=text):
+                self.assertEqual(resolve(text), {})
+
+    def test_explicit_area_is_a_coarse_polygon_and_precise_address_takes_precedence(self):
+        r = row('Einsatz des Ordnungsdienstes im Stadtbezirk Linden-Limmer')
+        _, geo, adds = self.outcome(r)
+        self.assertEqual(len(geo['features']), 1)
+        self.assertEqual(geo['features'][0]['properties']['areaId'], 'bezirk:10')
+        self.assertIn(geo['features'][0]['geometry']['type'], ('Polygon', 'MultiPolygon'))
+        loc, = adds['records'][r['id']]['locations']
+        self.assertEqual((loc['kind'], loc['accuracy'], loc['areaId']),
+                         ('area', 'Nur Stadtbezirk bekannt', 'bezirk:10'))
+        precise = row('Neubau einer Kita am Engelbosteler Damm 5 im Stadtteil Nordstadt')
+        _, geo, adds = self.outcome(precise)
+        self.assertEqual([f['geometry']['type'] for f in geo['features']], ['Point'])
+        self.assertEqual(adds['records'][precise['id']]['locations'][0]['label'], 'Engelbosteler Damm 5')
+
+    def test_meeting_location_never_supplies_a_fallback_area(self):
+        title = 'Antwort zum Schulangebot Sitzung des Stadtbezirksrates im Stadtbezirk Nord'
+        self.assertEqual(self.outcome(row(title))[2]['records'], {})
+
+    def test_schools_parks_and_partial_roads_do_not_supply_an_entire_street_axis(self):
+        for title in [
+            'GS An der Feldbuschwende, Klimatisierung der Verwaltung',
+            'Umnutzung in der Grundschule (GS) an der Feldbuschwende für schulische Nutzung',
+            'Förderverein der Grundschule An der Feldbuschwende; Anschaffung von Schulmaterial',
+            'Wiederaufbau eines Spielgerätes im Hermann-Löns-Park',
+            'Chaos und Vermüllung im Georgengarten konsequent beenden',
+            'Baumbestand im Girlitzpark',
+            'Umbau der Großen Barlinge - 2. Bauabschnitt',
+            'Umbau eines Teilabschnitts im Jädekamp',
+            'Umbau der Loccumer Straße in vier Teilbereichen zur Verkehrsberuhigung',
+            'Sanierung Radweg Kugelfangtrift und Sahlkamp',
+            'Barrierefreier Zugang von der Straße Am Plessenfelde zum Gehaplatz',
+            'Kreuzung Hahnenstraße/Callinstraße, Unbekanntstraße',
+            'Kreuzung Hahnenstraße/Callinstraße sowie Unbekanntstraße',
+            'Kreuzung Hahnenstraße/Callinstraße - Unbekanntdamm',
+            'Ausbau am Engelbosteler Damm 5) Weitere Maßnahmen',
+        ]:
+            with self.subTest(title=title):
+                self.assertEqual(self.outcome(row(title))[2]['records'], {})
+        _, geo, _ = self.outcome(row('Änderung der Beschilderung und Markierung in der Straße Hermann-Löns-Park'))
+        self.assertEqual([f['properties']['label'] for f in geo['features']], ['Hermann-Löns-Park'])
+
+    def test_same_named_facility_is_not_enough_for_a_recipient_address(self):
+        r = row('Umstrukturierung der Kindertagesstätte "Twipsy"')
+        for text in [
+            'An die Kindertagesstätte "Twipsy", Ortskamp 89: wir bitten um Stellungnahme.',
+            'Postanschrift der Kindertagesstätte "Twipsy", Ortskamp 89',
+            'Brief an die Kindertagesstätte "Twipsy", Ortskamp 89: Bitte um Stellungnahme zum Umbau.',
+        ]:
+            with self.subTest(text=text):
+                docs = {r['id']: [dict(kind='address', label='Ortskamp 89',
+                                     evidence=dict(source='document', text=text))]}
+                _, _, adds = self.project(dict(records=[r], generation='t'), dict(features=[], generation='t'),
+                                         self.resolver, docs)
+                self.assertEqual(adds['records'], {})
+
+    def test_care_capacity_at_the_same_facility_is_project_evidence_before_the_address(self):
+        for name, label, text in [
+            ('Unterm Regenbogen', 'Vahrenwalder Straße 109',
+             'die Betreuungszeit einer Kindergartengruppe (25 Plätze, 3/4-Betreuung) in der Kindertagesstätte "Unterm Regenbogen", Vahrenwalder Str. 109, in Trägerschaft des Ev.-Luth.'),
+            ('Twipsy', 'Ortskamp 89',
+             "die Betreuungszeit einer Kindergartengruppe (25 Plätze) in der Kindertagesstätte 'Twipsy', Ortskamp 89 im Stadtteil Bemerode, von 3/4 - auf eine Ganztagsbetreuung auszuweiten und"),
+            ('Die kleinen Gallier', 'Peiner Straße 30',
+             "die Betreuungszeit einer Kindergartengruppe (25 Plätze) der Kindertagesstätte 'Die kleinen Gallier', Peiner Str. 30 im Stadtteil Döhren, von einer 3/4- auf eine Ganztags-Betreuung auszuweiten und"),
+        ]:
+            with self.subTest(label=label):
+                r = row(f'Aufstockung der Betreuungszeit in der Kindertagesstätte "{name}"')
+                docs = {r['id']: [dict(kind='address', label=label, evidence=dict(source='document', text=text))]}
+                _, _, adds = self.project(dict(records=[r], generation='t'), dict(features=[], generation='t'),
+                                         self.resolver, docs)
+                self.assertEqual([loc['label'] for loc in adds['records'].get(r['id'], {}).get('locations', [])], [label])
+
     def test_civic_document_address_must_be_the_explicit_project_site(self):
         r = row('Errichtung und Förderung einer fünfgruppigen Kindertagesstätte')
         def match(text):
