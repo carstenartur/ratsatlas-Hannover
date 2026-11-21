@@ -44,9 +44,10 @@ export class SearchIndex {
     this.dates = this.rows.map(r => isoDay(r.date));
   }
 
-  search({ query = '', levels, yearFrom, yearTo, dateFrom, dateTo, mappedOnly = false, offset = 0, limit = 24 } = {}) {
+  search({ query = '', levels, yearFrom, yearTo, dateFrom, dateTo, mappedOnly = false, recordIds, offset = 0, limit = 24 } = {}) {
     const words = normalize(query).split(' ').filter(Boolean);
     const sourceLevels = new Set(levels ?? ['city', 'region', 'state']);
+    const areaRecords = Array.isArray(recordIds) ? new Set(recordIds) : null;
     const lower = isoDay(dateFrom) || (/^\d{4}$/.test(String(yearFrom)) ? `${yearFrom}-01-01` : '');
     const upper = isoDay(dateTo) || (/^\d{4}$/.test(String(yearTo)) ? `${yearTo}-12-31` : '');
     const start = Math.max(0, Math.floor(Number(offset) || 0));
@@ -56,7 +57,7 @@ export class SearchIndex {
     let total = 0, undatedCount = 0;
     for (let i = 0; i < this.rows.length; i++) {
       const row = this.rows[i];
-      if (!sourceLevels.has(row.level) || mappedOnly && !row.mapped || !words.every(w => this.text[i].includes(w))) continue;
+      if (!sourceLevels.has(row.level) || mappedOnly && !row.mapped || areaRecords && !areaRecords.has(row.id) || !words.every(w => this.text[i].includes(w))) continue;
       const day = this.dates[i], year = day ? Number(day.slice(0, 4)) : null;
       if (year !== null) years[year] = (years[year] || 0) + 1;
       // The brush is built from all non-date matches, never from the current

@@ -3,6 +3,7 @@ __pycache__/
 .DS_Store
 node_modules/
 site/data/ris
+site/data/enriched/
 data/hannover-snapshot.tar.gz
 browser-report/
 .superpowers/

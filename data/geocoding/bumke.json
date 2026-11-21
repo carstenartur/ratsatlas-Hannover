@@ -1,0 +1,20 @@
+{
+  "name": "Bumke-Areal · Nordstadt · Bebauungsplan Nr. 1862 Oberstraße",
+  "geometry": {"type": "Point", "coordinates": [9.72521, 52.3824]},
+  "attribution": "Landeshauptstadt Hannover, Hannover baut, Standortmarker des Projekts E-Damm 5 und 9",
+  "sourceUrl": "https://www.hannover.de/Media/02-GIS-Objekte/Lokationsdatenbank/Landeshauptstadt-Hannover/Hannover-baut-Lokationen/E-Damm-5-und-9-ehem.-Firmengel%C3%A4nde-Bumke",
+  "projectUrl": "https://www.hannover.de/Leben-in-der-Region-Hannover/Planen,-Bauen,-Wohnen/Bauen-Denkmalpflege/Hannover-baut/Aktuelle-Bauprojekte-im-Stadtgebiet/E-Damm-5-und-9-ehemaliges-Bumke-Firmengel%C3%A4nde",
+  "planUrl": "https://e-government.hannover-stadt.de/lhhsimwebre.nsf/DS/2235-2024",
+  "reviewed": {
+    "hannover-sim:0673-2020": {
+      "title": "Petition Nr. 06 / 2. Halbjahr 2019 von Herrn Patrick Bredl, Bürgerinitiative \"Bumke selber machen! - Netzwerk Wohnraum für alle\"",
+      "text": "Die Begründung der Petition benennt die Neubebauung der Bumke-Grundstücke am Engelbosteler Damm 5 und 9 im Geltungsbereich des Plans 1862.",
+      "url": "https://e-government.hannover-stadt.de/lhhsimwebre.nsf/DS/0673-2020"
+    },
+    "hannover-sim:0701-2020": {
+      "title": "Anfrage der Fraktion die FRAKTION zum Thema: Gemeinnützigen Wohnraum selber machen",
+      "text": "TOP 5.6 der Ratssitzung vom 26. März 2020 behandelt die Nachnutzung des Bumke-Geländes am Engelbosteler Damm 5 und 9.",
+      "url": "https://e-government.hannover-stadt.de/lhhsimwebre.nsf/TO/20200326_Rat_P"
+    }
+  }
+}

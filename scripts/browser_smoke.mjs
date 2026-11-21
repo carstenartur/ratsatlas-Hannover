@@ -14,7 +14,7 @@ const output = resolve('browser-report', engine);
 await mkdir(output, { recursive: true });
 const mime = { '.html':'text/html', '.js':'text/javascript', '.css':'text/css', '.json':'application/json', '.gz':'application/gzip', '.svg':'image/svg+xml', '.png':'image/png', '.woff2':'font/woff2' };
 const prefix = '/ratsatlas-Hannover/';
-const runtimeAssets = new Set(['app.js','data.js','search-worker.js','search.js','view-state.js','bonn-panels.js','timeline-adapter.js','timeline.js','style.css','hannover.css']);
+const runtimeAssets = new Set(['app.js','data.js','search-worker.js','search.js','view-state.js','bonn-panels.js','timeline-adapter.js','timeline.js','map-geography.js','style.css','hannover.css']);
 const runtimeRequests = new Map();
 const server = createServer(async (request, response) => {
   try {
@@ -56,6 +56,15 @@ async function hits(count) {
     return Number((text.match(/[\d.]+/) || [''])[0].replaceAll('.','')) === expected && !/läuft|geladen/i.test(text);
   }, count, {timeout:60000});
 }
+async function mapCount(count) {
+  await page.waitForFunction(expected => {
+    const text = document.getElementById('map-count')?.textContent || '';
+    return text === expected.toLocaleString('de-DE') + ' Kartenorte';
+  }, count);
+}
+async function pathCount(selector, count) {
+  await page.waitForFunction(({selector,count}) => document.querySelectorAll('#map ' + selector).length === count,{selector,count});
+}
 async function togglePanel(id, open=true) {
   const panel = page.locator('#'+id);
   if (await panel.isVisible() !== open) await clickControl(`button[data-panel="${id}"]`);
@@ -86,7 +95,81 @@ async function query(value,count) {
   await page.locator('#q').press('Enter');
   await hits(count);
 }
+function camera(href = page.url()) {
+  const params = new URL(href).searchParams;
+  return {lat:Number(params.get('lat') ?? 52.375),lng:Number(params.get('lng') ?? 9.735),zoom:Number(params.get('z') ?? 12)};
+}
+function result(id) { return page.locator(`#papers button[data-record="${id}"]`); }
+async function recordReady(id) {
+  await page.locator('#detail .source-identity').filter({hasText:id}).waitFor({state:'attached'});
+}
+async function focusedRecord(id, minZoom=15) {
+  await recordReady(id);
+  await page.waitForFunction(({id,minZoom}) => {
+    const params = new URL(location.href).searchParams;
+    return params.get('vorgang') === id && Number(params.get('z')) >= minZoom;
+  }, {id,minZoom});
+}
+async function screenPoint(coordinate) {
+  const {lat,lng,zoom}=camera();
+  const project=([longitude,latitude])=>{
+    const scale=256*2**zoom, s=Math.sin(latitude*Math.PI/180);
+    return [(longitude+180)/360*scale,(.5-Math.log((1+s)/(1-s))/(4*Math.PI))*scale];
+  };
+  const mapBox=await page.locator('#map').boundingBox();
+  const point=project(coordinate), center=project([lng,lat]);
+  return {x:mapBox.x+mapBox.width/2+point[0]-center[0], y:mapBox.y+mapBox.height/2+point[1]-center[1]};
+}
+async function visibleHighlight(coordinate) {
+  const pane = '#map .leaflet-record-selection-pane';
+  await page.locator(pane+' canvas').waitFor({state:'visible'});
+  await painted();
+  const point=await screenPoint(coordinate);
+  const sample=await page.evaluate(({pane,x,y})=>{
+    const canvas = document.querySelector(pane+' canvas');
+    const map = document.getElementById('map');
+    if (!map.contains(document.elementFromPoint(x,y))) return {occluded:true};
+    const box = canvas.getBoundingClientRect();
+    const scaleX=canvas.width/box.width, scaleY=canvas.height/box.height;
+    const left=Math.max(0,Math.floor((x-box.left-17)*scaleX)), right=Math.min(canvas.width,Math.ceil((x-box.left+17)*scaleX));
+    const top=Math.max(0,Math.floor((y-box.top-17)*scaleY)), bottom=Math.min(canvas.height,Math.ceil((y-box.top+17)*scaleY));
+    if (right<=left||bottom<=top) return {outsideCanvas:true};
+    const pixels=canvas.getContext('2d').getImageData(left,top,right-left,bottom-top).data;
+    const colors = [[255,176,0],[33,21,46]];
+    const strokes = colors.map(rgb=>{
+      for (let i=0;i<pixels.length;i+=4) {
+        if (pixels[i+3]>=230 && rgb.every((value,c)=>Math.abs(pixels[i+c]-value)<=5)) return true;
+      }
+      return false;
+    });
+    const style=getComputedStyle(canvas.parentElement);
+    return {strokes,pointerEvents:style.pointerEvents,zIndex:Number(style.zIndex)};
+  }, {pane,...point});
+  assert.deepEqual(sample.strokes,[true,true],`both selection strokes must be visible near ${coordinate}: ${JSON.stringify(sample)}`);
+  assert.equal(sample.pointerEvents,'none','the highlight pane intercepts the map');
+  assert.ok(sample.zIndex>400,'the selection must sit above the base vectors');
+}
+async function clickMapAt(coordinate) {
+  await page.locator('#map .leaflet-overlay-pane canvas').waitFor({state:'visible'});
+  await painted();
+  const {x,y}=await screenPoint(coordinate);
+  await page.mouse.click(x,y);
+}
+async function readPacked(path) {
+  return JSON.parse(gunzipSync(await readFile(resolve(root,path))));
+}
 try {
+  const {totals,derived}=JSON.parse(await readFile(resolve(root,'data/enriched/enrichment.json'),'utf8'));
+  const [originalMap,enrichedMap,geography]=await Promise.all([
+    readPacked('data/ris/map.geojson.gz'),
+    readPacked('data/enriched/'+derived.map.path),
+    readPacked('data/enriched/'+derived.geography.path)
+  ]);
+  const geometry = (map,id,type) => {
+    const feature = map.features.find(f=>f.geometry.type===type && f.properties.recordIds.includes(id));
+    assert.ok(feature,`missing fixture ${type} for ${id}`);
+    return feature.geometry;
+  };
   browser = await ({chromium,webkit}[engine]).launch({headless:true, ...(process.env.BROWSER_EXECUTABLE_PATH ? {executablePath:process.env.BROWSER_EXECUTABLE_PATH}: {})});
   report.interactions = await checkInteractions(browser,url,output);
   page = await browser.newPage({viewport:{width:1440,height:1000},locale:'de-DE'});
@@ -97,14 +180,68 @@ try {
   page.on('response',r=>{if(r.url().startsWith(url)&&r.status()>=400)report.assetErrors.push({url:r.url(),status:r.status()});});
   await page.goto(url);
   await page.locator('nav.nav').waitFor();
-  await hits(109605);
-  await page.waitForFunction(()=>document.querySelector('#map-count')?.textContent.includes('3.395'));
+  await hits(totals.recordCount);
+  await mapCount(totals.geometryCount);
+  const districts='path[data-area-id^="bezirk:"]';
+  const neighborhoods='path[data-area-id^="stadtteil:"]';
+  await pathCount(districts,13);
+  assert.match(await page.locator('#map .leaflet-tile-pane').evaluate(el=>getComputedStyle(el).filter),/grayscale/);
+  assert.equal(await page.locator('#map .leaflet-overlay-pane canvas').count(),0,'the overview draws all original streets at once');
   const mapBox=await page.locator('#map').boundingBox();
   assert.equal(mapBox.x,0); assert.equal(mapBox.y,0);
   assert.equal(mapBox.width,1440); assert.equal(mapBox.height,1000);
   assert.equal(await page.locator('link[href="app.css"]').count(),0);
   await overflow(); await capture('desktop');
-  report.assertions.push('Bonn fullviewport map/nav/panel layout; all 109605 records and 3395 source geometries');
+  report.assertions.push(`Bonn fullviewport layout, gray map with 13 districts, ${totals.recordCount} records and ${totals.geometryCount} supplied geometries`);
+
+  const areaSelect=page.locator('#f-area');
+  const district=geography.features.find(({properties})=>properties.areaId==='bezirk:01').properties;
+  const parts=geography.features.filter(({properties})=>properties.parentId===district.areaId).map(({properties})=>properties);
+  const neighborhood=parts.find(part=>part.recordIds.length&&part.geometryIds.length);
+  assert.ok(neighborhood,'the district fixture has a mapped neighborhood');
+  for (const [area,visibleParts] of [[district,parts.length],[neighborhood,0]]) {
+    await areaSelect.selectOption(area.areaId);
+    await hits(new Set(area.recordIds).size);
+    await mapCount(new Set(area.geometryIds).size);
+    await pathCount(districts,0);
+    await pathCount(neighborhoods,visibleParts);
+    assert.equal(new URL(page.url()).searchParams.get('gebiet'),area.areaId);
+    assert.equal(await areaSelect.inputValue(),area.areaId);
+    if (visibleParts) await capture('neighborhoods');
+  }
+  await page.locator('#map .leaflet-overlay-pane canvas').waitFor({state:'visible'});
+  await capture('places');
+  await areaSelect.selectOption('');
+  await hits(totals.recordCount);
+  await mapCount(totals.geometryCount);
+  await pathCount(districts,13);
+  assert.equal(new URL(page.url()).searchParams.has('gebiet'),false);
+  await painted();
+  const districtPoint=await screenPoint(district.labelPoint);
+  assert.equal(await page.evaluate(({x,y})=>document.elementFromPoint(x,y)?.getAttribute('data-area-id'),districtPoint),district.areaId,
+    'the returned overview must expose the district path to the pointer');
+  await page.mouse.click(districtPoint.x,districtPoint.y);
+  await hits(new Set(district.recordIds).size);
+  assert.equal(await areaSelect.inputValue(),district.areaId);
+  await togglePanel('panel-list');
+  const inDistrict=page.locator('#papers button[data-record]').first();
+  const inDistrictId=await inDistrict.getAttribute('data-record');
+  await inDistrict.click();
+  await recordReady(inDistrictId);
+  await pathCount(neighborhoods,0);
+  await page.getByRole('button',{name:/Zurück zu „Los geht’s“/}).click();
+  await pathCount(neighborhoods,parts.length);
+  await painted();
+  const baseHasPixels=await page.locator('#map .leaflet-overlay-pane canvas').evaluateAll(canvases=>canvases.some(canvas=>{
+    if (!canvas.width || !canvas.height) return false;
+    const rgba=canvas.getContext('2d').getImageData(0,0,canvas.width,canvas.height).data;
+    for(let i=3;i<rgba.length;i+=4) if (rgba[i]) return true;
+    return false;
+  }));
+  assert.equal(baseHasPixels,false,'leaving the record must clear detail vectors from the district');
+  await areaSelect.selectOption('');
+  await hits(totals.recordCount);
+  report.assertions.push('District and neighborhood picker use generated counts; the reset overview accepts district pointer clicks and leaving a selected record restores neighborhoods');
 
   await togglePanel('panel-list');
   await page.locator('#q').fill('1047/2026');
@@ -127,28 +264,31 @@ try {
   report.assertions.push('Browser Back and Forward restore distinct linked request/answer selections');
   report.assertions.push('Rapid query/filter changes and clickable request/answer relationship preserve qualified identity');
 
-  await page.goto(url);
-  await hits(109605);
-  await query('Gustav Adolf Straße',2);
-  await page.locator('#papers [data-record]').first().click();
-  await page.getByRole('button',{name:'Auf Karte zeigen',exact:true}).waitFor();
+  const street='hannover-sim:15-1782-2019F1';
+  const streetPoint=geometry(originalMap,street,'Point').coordinates;
+  await page.goto(url+'?q=Gustav+Adolf+Stra%C3%9Fe&lat=52.43732&lng=9.79231&z=11');
+  await hits(2);
+  // Select a result immediately after using the zoom control, while a zoom
+  // transition could still be active.
+  await page.locator('.leaflet-control-zoom-in').click();
+  await result(street).click();
+  await focusedRecord(street,16);
+  await visibleHighlight(streetPoint);
+  const autoCamera=camera();
+  await page.locator('.leaflet-control-zoom-out').click();
+  await page.waitForFunction(()=>new URL(location.href).searchParams.get('z')==='15');
+  await result(street).click();
+  await focusedRecord(street,16);
+  await visibleHighlight(streetPoint);
+  assert.deepEqual(camera(),autoCamera,'selecting the same result again must restore its focused camera');
+  report.assertions.push('Clicking a mapped result immediately after using a zoom control focuses its point; reselecting it restores the highlighted view');
   assert.match(await page.locator('#detail').innerText(),/Gustav.Adolf/);
   await capture('location-evidence');
   await page.getByRole('button',{name:'Auf Karte zeigen',exact:true}).click();
-  await page.waitForFunction(()=>Number(new URL(location.href).searchParams.get('z'))>=14);
   const sharedStreet=page.url();
-  const mapState=new URL(sharedStreet).searchParams;
-  const geometries=JSON.parse(gunzipSync(await readFile(resolve(root,'data/ris/map.geojson.gz'))));
-  const point=geometries.features.find(f=>f.geometry.type==='Point'&&f.properties.recordIds.includes(mapState.get('vorgang')));
-  assert.ok(point,'selected street record has its original point');
-  const mercator=([lng,lat])=>{
-    const scale=256*2**Number(mapState.get('z')), s=Math.sin(lat*Math.PI/180);
-    return [(lng+180)/360*scale,(.5-Math.log((1+s)/(1-s))/(4*Math.PI))*scale];
-  };
-  const target=mercator(point.geometry.coordinates), center=mercator([Number(mapState.get('lng')),Number(mapState.get('lat'))]);
-  const box=await page.locator('#map').boundingBox();
-  await page.mouse.click(box.x+box.width/2+target[0]-center[0],box.y+box.height/2+target[1]-center[1]);
-  await page.locator('.map-popup button[data-record]').first().waitFor();
+  await visibleHighlight(streetPoint);
+  await clickMapAt(streetPoint);
+  await page.locator(`.map-popup button[data-record="${street}"]`).waitFor();
   await togglePanel('panel-list');
   await page.locator('#levels input[value="city"]').uncheck();
   await hits(0);
@@ -157,29 +297,66 @@ try {
   assert.equal(new URL(page.url()).searchParams.get('q'),new URL(sharedStreet).searchParams.get('q'));
   report.assertions.push('Street evidence, clickable original point under highlight, filtered popup removal and shared selection');
 
-  for (const [id,type,coordinate,screenshot] of [
-    ['hannover-sim:15-0071-2025','LineString',[9.860888,52.396525],'geometry-line'],
-    ['hannover-sim:15-1035-2016','Polygon',[9.71998654749,52.3707555],'geometry-polygon']
+  for (const [id,searchText,hitCount,type,clickCoordinate,screenshot] of [
+    ['hannover-sim:15-0071-2025','15-0071/2025',2,'LineString',[9.860888,52.396525],'geometry-line'],
+    ['hannover-sim:15-1035-2016','15-1035/2016',1,'Polygon',[9.71998654749,52.3707555],'geometry-polygon']
   ]) {
-    await page.goto(url+'?fenster=detail&vorgang='+encodeURIComponent(id)); await hits(109605);
-    await page.locator('#detail-title').waitFor();
-    await page.waitForFunction(()=>document.querySelector('#map-count')?.textContent.includes('3.395'));
+    const {coordinates}=geometry(originalMap,id,type);
+    const strokeCoordinate=type==='LineString'?coordinates[1]:coordinates[0][1];
+    await page.goto(url+'?q='+encodeURIComponent(searchText));
+    await hits(hitCount);
+    await result(id).click();
+    await focusedRecord(id);
+    await visibleHighlight(strokeCoordinate);
     await page.locator('#detail summary').filter({hasText:'Geometrien und Herkunft'}).click();
     assert.match(await page.locator('#detail').innerText(),new RegExp(type));
     await page.getByRole('button',{name:'Auf Karte zeigen',exact:true}).click();
-    await page.waitForFunction(()=>Number(new URL(location.href).searchParams.get('z'))>=14);
-    const view=new URL(page.url()).searchParams;
-    const project=([lng,lat])=>{
-      const scale=256*2**Number(view.get('z')), s=Math.sin(lat*Math.PI/180);
-      return [(lng+180)/360*scale,(.5-Math.log((1+s)/(1-s))/(4*Math.PI))*scale];
-    };
-    const point=project(coordinate), center=project([Number(view.get('lng')),Number(view.get('lat'))]);
-    const mapBox=await page.locator('#map').boundingBox();
-    await page.mouse.click(mapBox.x+mapBox.width/2+point[0]-center[0],mapBox.y+mapBox.height/2+point[1]-center[1]);
+    await visibleHighlight(strokeCoordinate);
+    await clickMapAt(clickCoordinate);
     await page.locator(`.map-popup button[data-record="${id}"]`).waitFor();
     await capture(screenshot);
-    report.assertions.push(`Original ${type} remains visible and clickable under selection: ${id}`);
+    report.assertions.push(`List selection automatically focuses and paints the original ${type}, which remains clickable: ${id}`);
   }
+  await page.goto(url+'?vorgang='+encodeURIComponent(street));
+  await focusedRecord(street,16);
+  await visibleHighlight(streetPoint);
+  report.assertions.push('A mapped record permalink without coordinates focuses its original point');
+
+  const saved = new URL(url);
+  saved.search=new URLSearchParams({q:'Gustav Adolf Straße',vorgang:street,lat:'52.40001',lng:'9.76432',z:'13',fenster:'list,detail'});
+  await page.goto(saved.href);
+  await hits(2);
+  await recordReady(street);
+  await visibleHighlight(streetPoint);
+  assert.deepEqual(camera(),camera(saved.href),'explicit permalink camera was changed');
+  const otherStreet='hannover-sim:15-1446-2010F1';
+  await result(otherStreet).click();
+  await recordReady(otherStreet);
+  await page.locator('.leaflet-control-zoom-in').click();
+  await page.waitForFunction(()=>new URL(location.href).searchParams.get('z')==='14');
+  const forwardCamera=camera();
+  await page.goBack();
+  await recordReady(street);
+  await visibleHighlight(streetPoint);
+  assert.deepEqual(camera(),camera(saved.href),'Back did not restore the stored record camera');
+  await page.goForward();
+  await recordReady(otherStreet);
+  assert.deepEqual(camera(),forwardCamera,'Forward did not restore the later camera');
+  report.assertions.push('Explicit record viewport is preserved and distinct saved cameras survive browser Back and Forward');
+
+  await page.goto(url+'?q=Bumke');
+  await hits(19);
+  assert.equal(await page.locator('#papers button[data-record]').filter({hasText:'Mit Kartenort'}).count(),19);
+  const bumke='hannover-sim:2235-2024';
+  await result(bumke).click();
+  await focusedRecord(bumke,16);
+  await visibleHighlight(geometry(enrichedMap,bumke,'Point').coordinates);
+  const siteLocation=page.locator('#detail .locs li').filter({hasText:'Bumke-Areal'});
+  assert.match(await siteLocation.innerText(),/Im Ratsatlas ergänzt.*Projektstandort/);
+  assert.match(await siteLocation.innerText(),/Landeshauptstadt Hannover, Hannover baut/);
+  assert.match(await siteLocation.getByRole('link',{name:'Quelle der Verortung ↗'}).getAttribute('href'),/^https:\/\/www\.hannover\.de\//);
+  await capture('bumke');
+  report.assertions.push('Bumke finds 19 mapped records; choosing 2235/2024 focuses its municipal project location and displays its source');
 
   await page.goto(url+'?q=1047%2F2026&vorgang=hannover-sim%3A1047-2026F1');
   await hits(2);
@@ -205,7 +382,7 @@ try {
   await page.unroute(delayedRecords);
   report.assertions.push('A slow record response preserves focus after the user returns to search');
 
-  await page.goto(url); await hits(109605);
+  await page.goto(url); await hits(totals.recordCount);
   await query('0098/2004',2);
   for (const id of ['hannover-sim:0098-2004','region-hannover-ris:vo:1740']) {
     await page.locator(`#papers [data-record="${id}"]`).click();
@@ -224,7 +401,7 @@ try {
   assert.equal(new URL(page.url()).searchParams.get('vorgang'),new URL(sharedState).searchParams.get('vorgang'));
   report.assertions.push('All 15 unlocated Landtag records retain their original identity and shared source filter');
 
-  await page.goto(url); await hits(109605);
+  await page.goto(url); await hits(totals.recordCount);
   await togglePanel('timeline-wrap');
   await page.locator('#timeline-wrap .tl-svg').waitFor();
   await capture('timeline');
@@ -235,12 +412,15 @@ try {
   await page.locator('#share-close').click();
   await togglePanel('panel-list');
   await page.waitForFunction(()=>/^\d{4}-\d{2}-\d{2}$/.test(new URL(location.href).searchParams.get('von')||''));
-  await page.waitForFunction(()=>/\d[\d.]* Treffer/.test(document.querySelector('#count')?.textContent||'')&&!document.querySelector('#count')?.textContent.includes('109.605'));
+  await page.waitForFunction(total=>{
+    const count=document.querySelector('#count')?.textContent||'';
+    return /\d[\d.]* Treffer/.test(count)&&!count.includes(total.toLocaleString('de-DE'));
+  },totals.recordCount);
   const filtered=page.url(); await page.reload();
   await page.locator('#timeline-wrap[aria-busy="false"]').waitFor();
   assert.equal(new URL(page.url()).searchParams.get('von'),new URL(filtered).searchParams.get('von'));
   await page.locator('#timeline-wrap [data-preset="all"]').click();
-  await hits(109605);
+  await hits(totals.recordCount);
   assert.ok(!new URL(page.url()).searchParams.has('von'));
   report.assertions.push('Real Bonn timeline filters and shares ISO dates; reset restores all 16 undated records');
 
@@ -258,7 +438,8 @@ try {
   report.assertions.push('Phone list, unobstructed map and timeline are explicitly selected, painted and captured as distinct views');
   await clickControl('#status-open');
   await page.locator('#status-body').waitFor();
-  assert.match(await page.locator('#status-body').innerText(),/101\.601/);
+  const unlocated=(totals.recordCount-totals.mappedRecordCount).toLocaleString('de-DE');
+  assert.ok((await page.locator('#status-body').innerText()).includes(`${unlocated} Vorgänge ohne Kartenort`));
   await overflow(); await capture('sources');
   report.assertions.push('Tablet/phone have one collapsible sheet, accessible full map and honest source totals');
 
@@ -272,8 +453,7 @@ try {
   assert.deepEqual(report.requestFailures.filter(r=>r.url.startsWith(url)&&!/ERR_ABORTED|cancelled|canceled|Aborted/i.test(String(r.error))),[]);
   assert.deepEqual([...runtimeRequests.keys()].sort(),[...runtimeAssets].sort(),'runtime asset coverage');
   const releases=new Set([...runtimeRequests.values()].flatMap(values=>[...values]));
-  assert.equal(releases.size,1,'runtime files use inconsistent cache versions');
-  assert.ok(!releases.has(''),'new page requested a legacy unversioned runtime file');
+  assert.deepEqual([...releases],['kartenorte-20261121-2'],'runtime files must use the same current cache version');
   report.assertions.push('Browser and search worker load one consistently versioned runtime, independent of old unversioned cache entries');
 } catch(error) {
   report.failure=error.message;

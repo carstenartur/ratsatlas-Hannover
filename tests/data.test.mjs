@@ -42,6 +42,55 @@ function fixture() {
   return { atlas: new AtlasData({ baseUrl: 'http://localhost/project/data/ris/', fetch, worker: false }), id, payloads, manifest };
 }
 
+function enrichedFixture({generation, manifestHash, foreignGeometry = false} = {}) {
+  const base = fixture(), supplemental = new Map();
+  const sourceGeneration = base.manifest.generation;
+  const feature = {type:'Feature',geometry:{type:'Point',coordinates:[9.72521,52.3824]},properties:{geometryId:'place:example',recordIds:foreignGeometry ? ['hannover-sim:other'] : [base.id],label:'Belegter Projektstandort',accuracy:'Projektpunkt'}};
+  const values = {
+    searchIndex:{generation:sourceGeneration,records:[{id:base.id,title:'Radweg',level:'city',mapped:true,locations:['Belegter Projektstandort']}]},
+    map:{type:'FeatureCollection',generation:sourceGeneration,features:[feature]},
+    additions:{generation:sourceGeneration,records:{[base.id]:{geometryIds:['place:example'],locations:[{label:'Belegter Projektstandort',mapped:true,method:'Amtlicher Projektpunkt',sourceUrl:'https://www.hannover.de/projekt',evidence:{source:'document',text:'Der Projektstandort',url:'https://www.hannover.de/projekt'}}]}}}
+  };
+  const derived = {};
+  for (const [key,name] of [['searchIndex','search-index.json.gz'],['map','map.geojson.gz'],['additions','additions.json.gz']]) {
+    const a = asset(values[key]); a.ref.path = name; derived[key] = a.ref; supplemental.set(name,a.gzip);
+  }
+  const enrichment = {schemaVersion:1,sourceGeneration:generation ?? sourceGeneration,sourceManifestSha256:manifestHash ?? createHash('sha256').update(base.payloads.get('hannover.json')).digest('hex'),totals:{recordCount:1,mappedRecordCount:1,geometryCount:1,originalMappedRecordCount:0,addedRecordCount:1,addedGeometryCount:1,levelCounts:{city:{records:1,mapped:1}}},sources:[{url:'https://www.hannover.de/projekt',attribution:'Stadt Hannover'}],derived};
+  supplemental.set('enrichment.json',JSON.stringify(enrichment));
+  const fetch = async url => {
+    const u = new URL(url), payloads = u.pathname.includes('/enriched/') ? supplemental : base.payloads;
+    const name = u.pathname.split('/').pop();
+    return payloads.has(name) ? new Response(payloads.get(name)) : new Response('missing',{status:404});
+  };
+  return {...base,atlas:new AtlasData({baseUrl:'https://example.org/project/data/ris/',enrichmentUrl:'https://example.org/project/data/enriched/enrichment.json',fetch,worker:false}),supplemental,enrichment};
+}
+
+test('verified supplemental locations reach search, map and details while original events and source bytes survive', async () => {
+  const {atlas,id,payloads} = enrichedFixture();
+  const original = payloads.get('hannover.json');
+  const {manifest} = await atlas.init();
+  assert.equal(manifest.recordCount,1);
+  assert.equal(manifest.mappedRecordCount,1);
+  assert.equal((await atlas.search({query:'Projektstandort',mappedOnly:true})).total,1);
+  const map = await atlas.getMap(), detail = await atlas.getRecord(id);
+  assert.deepEqual(map.features[0].geometry.coordinates,[9.72521,52.3824]);
+  assert.deepEqual(detail.features[0].geometry.coordinates,[9.72521,52.3824]);
+  assert.equal(detail.locations[0].sourceUrl,'https://www.hannover.de/projekt');
+  assert.equal(detail.events[0].outcome,'Vertagt');
+  assert.equal(payloads.get('hannover.json'),original);
+});
+
+test('supplemental data from another source generation or source manifest is refused', async () => {
+  for (const options of [{generation:'0'.repeat(64)},{manifestHash:'f'.repeat(64)}]) {
+    await assert.rejects(enrichedFixture(options).atlas.init(),/Ergänzung|Datenstand|Quell/);
+  }
+});
+
+test('a supplemental feature assigned to another record cannot be shown as this records location', async () => {
+  const {atlas,id} = enrichedFixture({foreignGeometry:true});
+  await assert.rejects(atlas.getRecord(id),/Kartengeometrie|Zuordnung|Vorgang/);
+});
+
 test('old archives remain accessible, with their original source date', async () => {
   const { atlas, id } = fixture();
   const { manifest } = await atlas.init();

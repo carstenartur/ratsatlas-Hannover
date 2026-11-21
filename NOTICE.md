@@ -17,7 +17,8 @@ Paderta**. Der Lizenztext im Bonner Quellstand und der Lizenztext dieses Forks
 sind bytegleich. Übernommen wurden das Bonner Stylesheet und das angepasste
 Zeitleistenmodul. Die Kartenstruktur in `site/index.html`, die Steuerung in
 `site/bonn-panels.js` und die Darstellung von Liste, Details und Verfahrensschritten
-in `site/app.js` sind aus Bonn abgeleitet. Hannover ergänzt die Anbindung an
+in `site/app.js` sind aus Bonn abgeleitet. `site/map-geography.js` adaptiert die
+Bonner Gebietsnavigation, Beschriftung, Legende und Flächendarstellung für Hannover. Hannover ergänzt die Anbindung an
 die Unfallwerkbank-Daten, Suche, Filter, Quellennachweise und Recherche-URLs.
 [MIT-Lizenz](LICENSE) · [Dateizuordnung und Pflege](docs/UPSTREAM.md)
 
@@ -43,6 +44,23 @@ ist keine eigene pauschale Rechtefreigabe durch dieses Projekt.
 
 Für die Hannover-Daten gelten die überlieferten Hinweise im Quellpaket.
 [Datenherkunft, Zeitstände und Grenzen](docs/DATEN.md)
+
+## Amtliche Orts- und Gebietsgrundlagen
+
+- **LGLN (2026), ATKIS Basis-DLM und INSPIRE-Hauskoordinaten aus ALKIS,
+  bearbeitet, CC BY 4.0.** Die Unfallwerkbank stellt daraus ein Straßenachsen-
+  und Hauskoordinatenverzeichnis für die Landeshauptstadt Hannover bereit.
+  Der Ratsatlas verwendet diesen festgehaltenen Stand zur Verortung von
+  Maßnahmen. [Quellen, Bearbeitung und Prüfsumme](https://github.com/carstenartur/ratsatlas-Hannover/blob/main/data/geocoding/README.md)
+- **Datenquelle: CC-BY-4.0 – Bereich Geoinformation – LH Hannover.** Aus der
+  Statistischen Gliederung SKH5 wurden benannte Stadtbezirke und Stadtteile
+  ausgewählt, nach WGS 84 transformiert und für die Kartenanzeige vereinfacht.
+  [SKH5-Datenstand und Bearbeitung](https://github.com/carstenartur/ratsatlas-Hannover/blob/main/data/geography/README.md) ·
+  [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
+- **Landeshauptstadt Hannover, Hannover baut.** Der veröffentlichte Marker für
+  das E-Damm-Bauprojekt am ehemaligen Bumke-Gelände bezeichnet den
+  Projektstandort. Die Projektseite, der Kartenmarker und die Einzelnachweise
+  sind am Datensatz verlinkt. [Quelle des Projektmarkers](https://github.com/carstenartur/ratsatlas-Hannover/blob/main/data/geocoding/bumke.json)
 
 ## Leaflet 1.9.4
 

@@ -11,8 +11,8 @@
   <link rel="canonical" href="https://carstenartur.github.io/ratsatlas-Hannover/">
   <link rel="icon" href="favicon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="manifest" href="site.webmanifest">
   <link rel="preload" href="fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="tokens.css"><link rel="stylesheet" href="vendor/leaflet/leaflet.css"><link rel="stylesheet" href="style.css?v=bonn-20261121-1"><link rel="stylesheet" href="hannover.css?v=bonn-20261121-1">
-  <script src="vendor/leaflet/leaflet.js" defer></script><script type="module" src="app.js?v=bonn-20261121-1"></script>
+  <link rel="stylesheet" href="tokens.css"><link rel="stylesheet" href="vendor/leaflet/leaflet.css"><link rel="stylesheet" href="style.css?v=kartenorte-20261121-2"><link rel="stylesheet" href="hannover.css?v=kartenorte-20261121-2">
+  <script src="vendor/leaflet/leaflet.js" defer></script><script type="module" src="app.js?v=kartenorte-20261121-2"></script>
 </head>
 <body class="list-closed detail-open">
   <!-- Map, navigation and sheet structure derived from Ratsatlas Bonn
@@ -35,6 +35,7 @@
     <form class="nav-search" id="nav-search" role="search"><label for="q" class="visually-hidden">Drucksache, Straße, Hausnummer oder Suchbegriffe</label><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg><input type="search" id="q" placeholder="Drucksache, Straße, Hausnummer …" autocomplete="off" aria-controls="papers"></form>
     <button type="button" class="nav-burger" id="nav-burger" aria-expanded="false" aria-controls="nav-more"><svg class="icon" aria-hidden="true"><use href="#i-menu"/></svg><span>Menü</span></button>
     <div class="nav-more" id="nav-more">
+      <label class="area-picker" for="f-area"><span class="visually-hidden">Gebiet</span><select id="f-area" class="nav-area" disabled><option value="">Gebiete werden geladen …</option></select></label>
       <div class="nav-group seg" role="group" aria-label="Ansichten ein- und ausklappen">
         <button type="button" class="toggle" data-panel="panel-list" aria-controls="panel-list" aria-pressed="false" title="Liste"><svg class="icon" aria-hidden="true"><use href="#i-list"/></svg><span>Liste</span></button>
         <button type="button" class="toggle" data-panel="timeline-wrap" aria-controls="timeline-wrap" aria-pressed="false" title="Zeitleiste"><svg class="icon" aria-hidden="true"><use href="#i-timeline"/></svg><span>Zeitleiste</span></button>
@@ -48,7 +49,7 @@
     </div>
   </nav>
   <main>
-    <div id="map" role="region" aria-label="Karte der verorteten Vorgänge. Alle Vorgänge, auch ohne Kartenort, sind über die Liste zugänglich."></div>
+    <div id="map" class="map-gray" role="region" aria-label="Karte der Vorgänge: Stadtbezirk und Stadtteil auswählen oder oben das Gebiet wählen. Alle Vorgänge, auch ohne Kartenort, sind über die Liste zugänglich."></div>
     <section id="panel-list" class="panel glass" aria-labelledby="list-heading" hidden>
       <div class="resizer" data-resize="list" role="separator" tabindex="0" aria-label="Breite der Liste" aria-orientation="vertical"></div>
       <div class="panel-head"><h2 id="list-heading" tabindex="-1">Vorgänge</h2><button type="button" class="icon-btn" data-close="panel-list" aria-label="Liste einklappen">‹</button></div>
@@ -57,7 +58,7 @@
           <fieldset class="source-levels" id="levels"><legend>Quellen</legend><label class="check"><input type="checkbox" value="city" checked><span class="source-dot city"></span>Stadt</label><label class="check"><input type="checkbox" value="region" checked><span class="source-dot region"></span>Region</label><label class="check"><input type="checkbox" value="state" checked><span class="source-dot state"></span>Land</label></fieldset>
           <details class="acc" id="more-filters"><summary>Zeitraum und Ortsbezug<span id="active-filters"></span></summary><div class="filters"><div class="filter-row"><label>Von Datum<input id="from" type="date" min="1000-01-01" max="9999-12-31"></label><label>Bis Datum<input id="to" type="date" min="1000-01-01" max="9999-12-31"></label></div><label class="check"><input type="checkbox" id="mapped">Nur verortete Vorgänge</label><button type="button" class="link-btn" id="reset-dates" hidden>Zeitraum aufheben</button></div></details>
         </form>
-        <div class="list-summary"><p class="count" id="count" role="status" aria-live="polite">Daten werden geladen …</p><button type="button" class="link-btn" id="reset" hidden>Zurücksetzen</button></div>
+        <p id="area-note" class="hint" hidden></p><div class="list-summary"><p class="count" id="count" role="status" aria-live="polite">Daten werden geladen …</p><button type="button" class="link-btn" id="reset" hidden>Zurücksetzen</button></div>
         <ol class="papers" id="papers" tabindex="-1" aria-label="Suchergebnisse"></ol>
         <nav class="pagination" aria-label="Weitere Ergebnisse" hidden><button type="button" class="btn btn-secondary" id="prev">Zurück</button><span id="page"></span><button type="button" class="btn btn-secondary" id="next">Weiter</button></nav>
       </div>
@@ -70,6 +71,7 @@
     </section>
   </main>
   <div class="map-info glass" aria-label="Kartenstatus"><span id="map-count" role="status">Orte werden geladen …</span><button type="button" class="link-btn" data-open-status>Datenstand</button></div>
+  <div id="geography-status" class="geography-status glass" role="status" hidden></div>
   <footer class="source-footer"><a href="https://bonn.ratsatlas.de/" target="_blank" rel="noopener">Auf Basis von Ratsatlas Bonn</a><span> · </span><a href="datenschutz.html">Datenschutz</a></footer>
   <div class="visually-hidden" id="announce" role="status" aria-live="polite"></div>
   <dialog id="status" class="info-dialog glass" aria-labelledby="status-title"><div class="dialog-head"><h2 id="status-title">Datenstand und Quellen</h2><button type="button" class="icon-btn" id="status-close" aria-label="Datenstand schließen"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button></div><div id="status-body"><p>Daten werden geladen …</p></div></dialog>

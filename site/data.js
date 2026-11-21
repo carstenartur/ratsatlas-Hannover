@@ -1,4 +1,4 @@
-import { SearchIndex } from './search.js?v=bonn-20261121-1';
+import { SearchIndex } from './search.js?v=kartenorte-20261121-2';
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder('utf-8', { fatal: true });
@@ -49,8 +49,9 @@ export function qualifiedId(record) {
 }
 
 export class AtlasData {
-  constructor({ baseUrl = new URL('./data/ris/', import.meta.url), fetch: fetchImpl = (...args) => globalThis.fetch(...args), worker = true } = {}) {
+  constructor({ baseUrl = new URL('./data/ris/', import.meta.url), enrichmentUrl = null, fetch: fetchImpl = (...args) => globalThis.fetch(...args), worker = true } = {}) {
     this.baseUrl = new URL(baseUrl);
+    this.enrichmentUrl = enrichmentUrl ? new URL(enrichmentUrl, this.baseUrl) : null;
     this.fetch = fetchImpl;
     this.useWorker = worker && typeof Worker !== 'undefined';
     this.cache = new Map();
@@ -60,8 +61,8 @@ export class AtlasData {
     this.serial = 0;
   }
 
-  async _json(path) {
-    const response = await this.fetch(new URL(path, this.baseUrl), { cache: 'no-cache' });
+  async _json(path, baseUrl = this.baseUrl) {
+    const response = await this.fetch(new URL(path, baseUrl), { cache: 'no-cache' });
     if (!response.ok) throw new Error(`Der Datenstand konnte nicht geladen werden (HTTP ${response.status}).`);
     const bytes = await readLimited(response.body, 512 * 1024);
     this.jsonHashes.set(path, await digest(bytes));
@@ -78,16 +79,55 @@ export class AtlasData {
       for (const [key, expected] of [['searchIndex', 'search-index.json.gz'], ['map', 'map.geojson.gz']]) {
         if (migration.derived?.[key]?.path !== expected) throw new Error('Der Importbericht enthält keine gültige Such- oder Kartenprojektion.');
       }
+      this.originalManifest = manifest;
       this.manifest = manifest; this.migration = migration;
-      return { manifest, migration };
+      this.derived = migration.derived; this.projectionBase = this.baseUrl;
+      if (this.enrichmentUrl) {
+        const enrichment = await this._json(this.enrichmentUrl.href);
+        const totals = enrichment.totals;
+        if (enrichment.schemaVersion !== 1 || enrichment.sourceGeneration !== manifest.generation ||
+            enrichment.sourceManifestSha256 !== this.jsonHashes.get('hannover.json')) {
+          throw new Error('Die Orts-Ergänzung gehört zu einem anderen Quell-Datenstand.');
+        }
+        if (!totals || totals.recordCount !== manifest.recordCount ||
+            !Number.isSafeInteger(totals.mappedRecordCount) || totals.mappedRecordCount < manifest.mappedRecordCount || totals.mappedRecordCount > manifest.recordCount ||
+            !Number.isSafeInteger(totals.geometryCount) || totals.geometryCount < manifest.geometryCount) {
+          throw new Error('Die Zählwerte der Orts-Ergänzung sind unvollständig oder widersprüchlich.');
+        }
+        for (const [level, counts] of Object.entries(manifest.levelCounts || {})) {
+          const next = totals.levelCounts?.[level];
+          if (!next || next.records !== counts.records || !Number.isSafeInteger(next.mapped) || next.mapped < counts.mapped || next.mapped > next.records) {
+            throw new Error('Die Quellenebenen der Orts-Ergänzung stimmen nicht mit dem übernommenen Bestand überein.');
+          }
+        }
+        for (const [key, path] of [['searchIndex','search-index.json.gz'],['map','map.geojson.gz'],['additions','additions.json.gz']]) {
+          if (enrichment.derived?.[key]?.path !== path) throw new Error('Ungültige Projektion in der Orts-Ergänzung.');
+        }
+        this.enrichment = enrichment;
+        this.derived = enrichment.derived;
+        this.projectionBase = new URL('./', this.enrichmentUrl);
+        this.manifest = {...manifest,recordCount:totals.recordCount,mappedRecordCount:totals.mappedRecordCount,
+          geometryCount:totals.geometryCount,levelCounts:totals.levelCounts || manifest.levelCounts,
+          enrichment:{totals,sources:enrichment.sources || []}};
+      }
+      return { manifest:this.manifest, migration };
     }).catch(error => { this.initializing = null; throw error; });
     return this.initializing;
   }
 
+  _projectionUrl(name) {
+    const ref = this.derived[name];
+    if (!ref || typeof ref.path !== 'string' || !/^[a-z-]+\.(?:json|geojson)\.gz$/.test(ref.path)) throw new Error('Die ergänzenden Datendateien fehlen oder sind ungültig.');
+    const url = new URL(ref.path, this.projectionBase);
+    // Stable projection filenames are versioned by their verified content.
+    url.searchParams.set('v',ref.sha256);
+    return url;
+  }
+
   async _projection(name) {
     await this.init();
-    const ref = this.migration.derived[name];
-    const value = await verifiedJson(await this.fetch(new URL(ref.path, this.baseUrl)), ref);
+    const ref = this.derived[name];
+    const value = await verifiedJson(await this.fetch(this._projectionUrl(name)), ref);
     if (value.generation !== this.manifest.generation) throw new Error('Die Datenprojektion gehört zu einem anderen Datenstand.');
     return value;
   }
@@ -100,11 +140,30 @@ export class AtlasData {
     return this.mapPromise;
   }
 
+  async getGeography() {
+    if (!this.geographyPromise) this.geographyPromise = this._projection('geography').then(value => {
+      if (value.type !== 'FeatureCollection' || !Array.isArray(value.features) || value.mapSha256 !== this.derived.map.sha256) {
+        throw new Error('Die Gebietszuordnung gehört nicht zur aktuellen Kartenprojektion.');
+      }
+      return value;
+    }).catch(error => { this.geographyPromise = null; throw error; });
+    return this.geographyPromise;
+  }
+
+  async _additions() {
+    if (!this.enrichment) return {};
+    if (!this.additionsPromise) this.additionsPromise = this._projection('additions').then(value => {
+      if (!value.records || typeof value.records !== 'object' || Array.isArray(value.records)) throw new Error('Die ergänzten Ortszuordnungen sind ungültig.');
+      return value.records;
+    }).catch(error => { this.additionsPromise = null; throw error; });
+    return this.additionsPromise;
+  }
+
   async search(params = {}) {
     await this.init();
     if (this.useWorker) {
       if (!this.worker) {
-        this.worker = new Worker(new URL('./search-worker.js?v=bonn-20261121-1', import.meta.url), { type: 'module' });
+        this.worker = new Worker(new URL('./search-worker.js?v=kartenorte-20261121-2', import.meta.url), { type: 'module' });
         this.worker.onmessage = ({ data }) => {
           const request = this.pending.get(data.id);
           if (!request) return;
@@ -119,7 +178,7 @@ export class AtlasData {
       const id = ++this.serial;
       return new Promise((resolve, reject) => {
         this.pending.set(id, { resolve, reject });
-        this.worker.postMessage({ id, params, url: new URL(this.migration.derived.searchIndex.path, this.baseUrl).href, descriptor: this.migration.derived.searchIndex, generation: this.manifest.generation, count: this.manifest.recordCount });
+        this.worker.postMessage({ id, params, url: this._projectionUrl('searchIndex').href, descriptor: this.derived.searchIndex, generation: this.manifest.generation, count: this.manifest.recordCount });
       });
     }
     if (!this.indexPromise) this.indexPromise = this._projection('searchIndex').then(value => {
@@ -222,6 +281,19 @@ export class AtlasData {
       if (feature?.properties?.geometryId !== geometryId) throw new Error('Eine Kartengeometrie gehört nicht zum Vorgang.');
       return feature;
     }));
+    const added = (await this._additions())[record.id];
+    if (added) {
+      if (!Array.isArray(added.geometryIds) || !Array.isArray(added.locations)) throw new Error('Ungültige ergänzte Ortszuordnung zum Vorgang.');
+      if (!this.mapById) this.mapById = new Map((await this.getMap()).features.map(feature => [feature.properties?.geometryId,feature]));
+      const seen = new Set(features.map(feature => feature.properties.geometryId));
+      for (const geometryId of added.geometryIds) {
+        const feature = this.mapById.get(geometryId);
+        if (!feature || !feature.properties.recordIds?.includes(record.id)) throw new Error('Eine ergänzte Kartengeometrie gehört nicht zum Vorgang.');
+        if (!seen.has(geometryId)) { features.push(feature); seen.add(geometryId); }
+      }
+      locations.push(...added.locations.map(item => ({...item,supplemental:true})));
+      record.mapped = features.length > 0;
+    }
     return { record, locations, events, relationships, relatedRecords, features };
   }
 
