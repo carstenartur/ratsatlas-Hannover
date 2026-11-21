@@ -26,7 +26,7 @@ Sechs ursprünglich verortete Vorgänge liegen außerhalb der Hannover-Gebiete.
 
 ### Nachweise und Gegenproben
 
-Die lokale Gesamtsuite umfasst **72 Python-Tests und 45 JavaScript-Tests**.
+Die lokale Gesamtsuite umfasst **72 Python-Tests und 46 JavaScript-Tests**.
 Der vollständige Importcheck bestätigt 109.605 Vorgänge und 6.905 gültige
 Quellpartitionen. Neubau und `enrich_locations.py --check` liefern dieselben
 Daten und Prüfsummen. Die Originaldaten werden dabei ausschließlich gelesen.
@@ -47,6 +47,7 @@ Die Browserprüfung in GitHub Actions erweitert die bisherigen Fälle um:
 - Göttinger Chaussee/Bückeburger Allee: beide echten Kreuzungspunkte hervorgehoben und anklickbar.
 - Stadtbezirk Linden-Limmer: Flächentreffer schon in der Übersicht, hervorgehobene Grenze und keine Vererbung an einzelne Stadtteile.
 - Stadtteil Ricklingen: grobe Genauigkeit sichtbar, Zugehörigkeit zum eigenen Bezirk erhalten.
+- Gemischte Ortsansicht mit Bezirk und Stadtteil: kleinere Flächen bleiben anklickbar, und das Popup benennt die grobe Genauigkeit unmittelbar.
 
 Die Aufnahme erfolgt in Chromium und WebKit auf Desktop, Tablet und Telefon.
 Die Berichte und Bilder liegen im Artefakt `hannover-browser-qa` des jeweils

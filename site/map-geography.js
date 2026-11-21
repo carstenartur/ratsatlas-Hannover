@@ -76,10 +76,11 @@ export function overviewPoint({type, coordinates}) {
 }
 
 export function mapDisplayFeatures(features, detail) {
-  const areas = [], places = [];
+  const districts = [], neighborhoods = [], places = [];
   for (const feature of features) {
     if (feature.properties.kind === 'area') {
-      areas.push(feature);
+      if (feature.properties.areaId?.startsWith('stadtteil:')) neighborhoods.push(feature);
+      else districts.push(feature);
     } else if (detail) {
       places.push(feature);
     } else {
@@ -87,8 +88,8 @@ export function mapDisplayFeatures(features, detail) {
       if (coordinates) places.push({...feature, geometry:{type:'Point',coordinates}});
     }
   }
-  // Draw broad area hit regions below individual streets and markers.
-  return [...areas, ...places];
+  // Canvas sends the click to the topmost hit, so draw the most specific locations last.
+  return [...districts, ...neighborhoods, ...places];
 }
 
 // The current filter determines the colour ramp for each level, using the

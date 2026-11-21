@@ -434,6 +434,26 @@ try {
     report.assertions.push(`New ${accuracy}: list selection focuses, displays evidence and keeps every tested part clickable (${id})`);
   }
 
+  // Bothfeld and Isernhagen-Süd share a district. Only Bothfeld has a
+  // neighborhood-level record group. Both interior points are clear of markers.
+  await page.goto(url+'?lat=52.42945&lng=9.79625&z=14&fenster=');
+  await hits(totals.recordCount);
+  await mapCount(totals.geometryCount);
+  const areaPopup=page.locator('.map-popup');
+  for (const [coordinate,areaId,label,accuracy] of [
+    [[9.799485,52.418199],'stadtteil:22','Stadtteil Bothfeld','Nur Stadtteil bekannt'],
+    [[9.793014,52.440714],'bezirk:03','Stadtbezirk Bothfeld-Vahrenheide','Nur Stadtbezirk bekannt']
+  ]) {
+    const group=enrichedMap.features.find(f=>f.properties.areaId===areaId).properties;
+    await clickMapAt(coordinate);
+    await areaPopup.getByText(label,{exact:true}).waitFor();
+    await areaPopup.getByText(accuracy,{exact:true}).waitFor();
+    await areaPopup.getByText(group.recordIds.length+' verknüpfte Vorgänge',{exact:true}).waitFor();
+    await areaPopup.locator(`button[data-record="${group.recordIds[0]}"]`).waitFor();
+    await page.locator('.leaflet-popup-close-button').click();
+  }
+  report.assertions.push('With all locations present, clicks in Bothfeld and Isernhagen-Süd open the separate neighborhood and district record groups with their exact accuracy');
+
   for (const [id,searchText,areaId,accuracy,screenshot] of [
     ['hannover-sim:15-1375-2023','15-1375/2023','bezirk:10','Nur Stadtbezirk bekannt','new-district'],
     ['hannover-sim:15-0143-2023S1','15-0143/2023','stadtteil:40','Nur Stadtteil bekannt','new-neighborhood']
@@ -448,6 +468,7 @@ try {
     // A coarse location remains a clickable surface in overview mode. Its
     // interior must not disappear into a representative point on the border.
     await clickMapAt(area.labelPoint);
+    await areaPopup.getByText(accuracy,{exact:true}).waitFor();
     await page.locator(`.map-popup button[data-record="${id}"]`).waitFor();
     await togglePanel('panel-list');
     await result(id).click();

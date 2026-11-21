@@ -228,7 +228,9 @@ function openMapRecords(feature,latlng) {
   if (!ids.length) return;
   const body = node('div',null,'map-popup'), list = node('div'), pager = node('div',null,'popup-pager');
   const pages = Math.ceil(ids.length / 10);
-  body.append(node('strong',feature.properties.label || 'Kartenort'),node('p',format(ids.length) + ' verknüpfte Vorgänge'),list,pager);
+  body.append(node('strong',feature.properties.label || 'Kartenort'));
+  if (feature.properties.kind === 'area') body.append(node('p',feature.properties.accuracy));
+  body.append(node('p',format(ids.length) + ' verknüpfte Vorgänge'),list,pager);
   const popup = L.popup().setLatLng(latlng).setContent(body).openOn(map);
   let page = 0;
   async function display(index) {

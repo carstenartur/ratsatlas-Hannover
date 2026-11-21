@@ -61,3 +61,19 @@ test('area locations keep their polygons below precise streets and points at eit
   assert.deepEqual(mapDisplayFeatures(features,true),[area,street,address]);
   assert.deepEqual(features,before,'display transformation modified source geometries or ordering');
 });
+
+test('contained neighborhoods draw above their districts in stable order, with precise places on top', () => {
+  function square(areaId, min, max) {
+    return {type:'Feature',properties:{kind:'area',areaId},
+      geometry:{type:'Polygon',coordinates:[[[min,min],[max,min],[max,max],[min,max],[min,min]]]}};
+  }
+  const districtA = square('bezirk:01',0,10), districtB = square('bezirk:02',20,30);
+  const childA = square('stadtteil:01',2,6), childB = square('stadtteil:10',23,27);
+  const point = {type:'Feature',properties:{kind:'address'},geometry:{type:'Point',coordinates:[4,4]}};
+  const source = [childB,point,districtA,childA,districtB];
+  const before = structuredClone(source);
+  for (const detail of [false,true]) {
+    assert.deepEqual(mapDisplayFeatures(source,detail),[districtA,districtB,childB,childA,point]);
+  }
+  assert.deepEqual(source,before);
+});
