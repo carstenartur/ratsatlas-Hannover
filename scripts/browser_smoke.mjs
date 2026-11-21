@@ -450,7 +450,13 @@ try {
     await areaPopup.getByText(accuracy,{exact:true}).waitFor();
     await areaPopup.getByText(group.recordIds.length+' verknüpfte Vorgänge',{exact:true}).waitFor();
     await areaPopup.locator(`button[data-record="${group.recordIds[0]}"]`).waitFor();
-    await page.locator('.leaflet-popup-close-button').click();
+    await page.locator('#map .leaflet-pan-anim').waitFor({state:'detached'});
+    const close=page.locator('.leaflet-popup-close-button');
+    const closeBox=await close.boundingBox(), navBox=await page.locator('nav.nav').boundingBox();
+    assert.ok(closeBox.y>=navBox.y+navBox.height,'the populated popup close control must clear the navigation');
+    await close.click();
+    // Leaflet keeps a closing popup in the DOM until its fade has finished.
+    await areaPopup.waitFor({state:'detached'});
   }
   report.assertions.push('With all locations present, clicks in Bothfeld and Isernhagen-Süd open the separate neighborhood and district record groups with their exact accuracy');
 

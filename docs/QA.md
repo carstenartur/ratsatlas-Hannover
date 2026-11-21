@@ -2,7 +2,7 @@
 
 ## Erweiterte Verortung — 21. November 2026
 
-Der neue Stand baut auf PR #4 mit 9.502 Kartenorten auf. Die folgenden Zahlen
+Der neue Stand baut auf PR #4 mit 9.502 Vorgängen mit Kartenbezug auf. Die folgenden Zahlen
 stammen aus dem vollständigen Neubau und dessen reproduzierter Offlineprüfung.
 Die älteren Prüfberichte weiter unten behalten ihre damaligen Zahlen.
 
@@ -47,7 +47,7 @@ Die Browserprüfung in GitHub Actions erweitert die bisherigen Fälle um:
 - Göttinger Chaussee/Bückeburger Allee: beide echten Kreuzungspunkte hervorgehoben und anklickbar.
 - Stadtbezirk Linden-Limmer: Flächentreffer schon in der Übersicht, hervorgehobene Grenze und keine Vererbung an einzelne Stadtteile.
 - Stadtteil Ricklingen: grobe Genauigkeit sichtbar, Zugehörigkeit zum eigenen Bezirk erhalten.
-- Gemischte Ortsansicht mit Bezirk und Stadtteil: kleinere Flächen bleiben anklickbar, und das Popup benennt die grobe Genauigkeit unmittelbar.
+- Gemischte Ortsansicht mit Bezirk und Stadtteil: kleinere Flächen bleiben anklickbar, und das Popup benennt die grobe Genauigkeit unmittelbar. Die Schließen-Schaltfläche bleibt unterhalb der Navigation erreichbar; aufeinanderfolgende Kartenklicks warten im Test auf abgeschlossene Kamerabewegung und ausgeblendete Fenster.
 
 Die Aufnahme erfolgt in Chromium und WebKit auf Desktop, Tablet und Telefon.
 Die Berichte und Bilder liegen im Artefakt `hannover-browser-qa` des jeweils
