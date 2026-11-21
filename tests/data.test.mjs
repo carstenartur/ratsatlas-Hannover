@@ -54,6 +54,20 @@ test('old archives remain accessible, with their original source date', async ()
   assert.equal((await atlas.getMap()).features.length, 0);
 });
 
+test('default browser fetch retains its native global receiver', async () => {
+  const { payloads } = fixture();
+  const original = globalThis.fetch;
+  globalThis.fetch = async function (url) {
+    assert.equal(this, globalThis, 'browser fetch must be called on its global scope');
+    return new Response(payloads.get(new URL(url).pathname.split('/').pop()));
+  };
+  try {
+    const atlas = new AtlasData({ baseUrl: 'http://localhost/project/data/ris/', worker: false });
+    await atlas.init();
+    assert.equal((await atlas.search({ query: 'Radweg' })).total, 1);
+  } finally { globalThis.fetch = original; }
+});
+
 test('missing records and damaged assets fail visibly instead of returning invented empty details', async () => {
   const { atlas, id, payloads, manifest } = fixture();
   await assert.rejects(atlas.getRecord('hannover-sim:missing'), /nicht im übernommenen Bestand/);

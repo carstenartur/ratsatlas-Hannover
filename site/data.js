@@ -49,7 +49,7 @@ export function qualifiedId(record) {
 }
 
 export class AtlasData {
-  constructor({ baseUrl = new URL('./data/ris/', import.meta.url), fetch: fetchImpl = globalThis.fetch, worker = true } = {}) {
+  constructor({ baseUrl = new URL('./data/ris/', import.meta.url), fetch: fetchImpl = (...args) => globalThis.fetch(...args), worker = true } = {}) {
     this.baseUrl = new URL(baseUrl);
     this.fetch = fetchImpl;
     this.useWorker = worker && typeof Worker !== 'undefined';
