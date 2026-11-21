@@ -22,9 +22,11 @@ const server = createServer(async (request, response) => {
 await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
 const url = `http://127.0.0.1:${server.address().port}${prefix}`;
 const browser = await chromium.launch({ headless: true });
-const report = { basePath: prefix, assertions: [], screenshots: [], pageErrors: [] };
+const report = { basePath: prefix, assertions: [], screenshots: [], pageErrors: [], consoleErrors: [], requestFailures: [] };
 const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
 page.on('pageerror', error => report.pageErrors.push(error.message));
+page.on('console', message => { if (message.type() === 'error') report.consoleErrors.push(message.text()); });
+page.on('requestfailed', request => report.requestFailures.push({ url: request.url(), error: request.failure()?.errorText }));
 async function screenshot(name) {
   await page.screenshot({ path: resolve(output, name + '.png'), fullPage: true });
   report.screenshots.push(name + '.png');
@@ -104,6 +106,12 @@ try {
   assert.match(await page.locator('#status-body').innerText(), /101\.601/);
   report.assertions.push('820px and 390px layouts, list/map switching, honest source and unlocated counts');
   assert.deepEqual(report.pageErrors, []);
+} catch (error) {
+  report.failure = error.message;
+  report.body = await page.locator('body').innerText().catch(() => 'Page unavailable');
+  await screenshot('failure').catch(() => {});
+  console.error(JSON.stringify(report, null, 2));
+  throw error;
 } finally {
   await writeFile(resolve(output, 'report.json'), JSON.stringify(report, null, 2));
   await browser.close();

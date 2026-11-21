@@ -326,9 +326,10 @@ render();
 try {
   const {manifest,migration} = await atlas.init();
   showStatus(manifest,migration); ready = true; startMap(); render();
-} catch {
+} catch (error) {
   $('stats').textContent = 'Der Datenbestand konnte nicht geladen werden.';
-  $('status-body').textContent = 'Quelleninformationen sind momentan nicht verfügbar.';
+  $('status-body').textContent = error.message || 'Quelleninformationen sind momentan nicht verfügbar.';
+  console.error('Ratsatlas konnte den Datenbestand nicht initialisieren:',error);
   $('hits').textContent = 'Daten nicht verfügbar'; $('list').append(button('Seite neu laden',() => location.reload()));
   $('map-count').textContent = 'Karte nicht verfügbar';
 }
