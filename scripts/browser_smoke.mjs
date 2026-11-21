@@ -28,8 +28,18 @@ await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
 const url = `http://127.0.0.1:${server.address().port}${prefix}`;
 const report = { engine, basePath:prefix, assertions:[], screenshots:[], pageErrors:[], consoleErrors:[], requestFailures:[], assetErrors:[] };
 let browser, page;
+async function painted() {
+  await page.evaluate(async () => {
+    await document.fonts.ready;
+    await Promise.all(document.getAnimations().filter(animation => animation.effect?.getTiming().iterations !== Infinity).map(animation => animation.finished.catch(()=>{})));
+    await new Promise(resolve => requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+  });
+}
 async function capture(name) {
-  await page.screenshot({path:resolve(output, name+'.png'), fullPage:true});
+  await painted();
+  await page.waitForFunction(()=>!document.querySelector('#map.leaflet-zoom-anim') && [...document.querySelectorAll('#map img')].every(image=>image.complete));
+  await painted();
+  await page.screenshot({path:resolve(output, name+'.png'), fullPage:false, animations:'disabled'});
   report.screenshots.push(name+'.png');
 }
 async function hits(count) {
@@ -51,9 +61,17 @@ async function clickControl(selector) {
 async function overflow() {
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'horizontal overflow');
 }
-async function singleSheet() {
+async function singleSheet(expected=null) {
   const open = await page.locator('#panel-list, #panel-detail, #timeline-wrap').evaluateAll(elements => elements.filter(el=>!el.hidden).map(el=>el.id));
-  assert.ok(open.length<=1, 'mobile shows more than one content sheet: '+open.join(', '));
+  assert.deepEqual(open,expected ? [expected] : [], 'unexpected mobile content sheet');
+  assert.equal(await page.locator('#nav-burger').getAttribute('aria-expanded'),'false','mobile menu covers the requested view');
+}
+async function showSheet(id=null) {
+  await painted();
+  await clickControl('#map-view');
+  if (id) await togglePanel(id);
+  await painted();
+  await singleSheet(id);
 }
 async function query(value,count) {
   await page.locator('#q').fill(value);
@@ -63,7 +81,7 @@ async function query(value,count) {
 try {
   browser = await ({chromium,webkit}[engine]).launch({headless:true, ...(process.env.BROWSER_EXECUTABLE_PATH ? {executablePath:process.env.BROWSER_EXECUTABLE_PATH}: {})});
   report.interactions = await checkInteractions(browser,url,output);
-  page = await browser.newPage({viewport:{width:1440,height:1000}});
+  page = await browser.newPage({viewport:{width:1440,height:1000},locale:'de-DE'});
   page.setDefaultTimeout(30000);
   page.on('pageerror',e=>report.pageErrors.push(e.message));
   page.on('console',m=>{if(m.type()==='error')report.consoleErrors.push(m.text());});
@@ -219,14 +237,17 @@ try {
   report.assertions.push('Real Bonn timeline filters and shares ISO dates; reset restores all 16 undated records');
 
   await page.setViewportSize({width:820,height:1180});
-  await togglePanel('panel-list'); await singleSheet();
+  await showSheet('panel-list');
   await overflow(); await capture('tablet');
   await page.setViewportSize({width:390,height:844});
-  await singleSheet(); await overflow(); await capture('mobile-list');
-  await togglePanel('panel-list',false); await singleSheet();
+  await showSheet('panel-list'); await overflow(); await capture('mobile-list');
+  await showSheet();
   await overflow(); await capture('mobile-map');
-  await togglePanel('timeline-wrap'); await singleSheet();
+  await showSheet('timeline-wrap');
   await overflow(); await capture('mobile-timeline');
+  const phoneViews=await Promise.all(['mobile-list','mobile-map','mobile-timeline'].map(name=>readFile(resolve(output,name+'.png'))));
+  for(let i=0;i<phoneViews.length;i++) for(let j=i+1;j<phoneViews.length;j++) assert.ok(!phoneViews[i].equals(phoneViews[j]),'distinct phone views produced the same screenshot');
+  report.assertions.push('Phone list, unobstructed map and timeline are explicitly selected, painted and captured as distinct views');
   await clickControl('#status-open');
   await page.locator('#status-body').waitFor();
   assert.match(await page.locator('#status-body').innerText(),/101\.601/);
