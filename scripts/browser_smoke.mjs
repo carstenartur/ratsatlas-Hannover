@@ -14,10 +14,18 @@ const output = resolve('browser-report', engine);
 await mkdir(output, { recursive: true });
 const mime = { '.html':'text/html', '.js':'text/javascript', '.css':'text/css', '.json':'application/json', '.gz':'application/gzip', '.svg':'image/svg+xml', '.png':'image/png', '.woff2':'font/woff2' };
 const prefix = '/ratsatlas-Hannover/';
+const runtimeAssets = new Set(['app.js','data.js','search-worker.js','search.js','view-state.js','bonn-panels.js','timeline-adapter.js','timeline.js','style.css','hannover.css']);
+const runtimeRequests = new Map();
 const server = createServer(async (request, response) => {
   try {
-    const pathname = decodeURIComponent(new URL(request.url, 'http://localhost').pathname);
+    const requested = new URL(request.url, 'http://localhost');
+    const pathname = decodeURIComponent(requested.pathname);
     if (!pathname.startsWith(prefix)) throw new Error('outside site');
+    const asset = pathname.slice(prefix.length);
+    if (runtimeAssets.has(asset)) {
+      if (!runtimeRequests.has(asset)) runtimeRequests.set(asset,new Set());
+      runtimeRequests.get(asset).add(requested.searchParams.get('v') || '');
+    }
     const path = resolve(root, pathname.slice(prefix.length) || 'index.html');
     if (!path.startsWith(root + sep)) throw new Error('outside site');
     response.setHeader('Content-Type', mime[extname(path)] || 'application/octet-stream');
@@ -262,12 +270,18 @@ try {
   assert.deepEqual(report.interactions.filter(result=>!result.passed),[], 'interaction regressions');
   assert.deepEqual(report.assetErrors,[]);
   assert.deepEqual(report.requestFailures.filter(r=>r.url.startsWith(url)&&!/ERR_ABORTED|cancelled|canceled|Aborted/i.test(String(r.error))),[]);
+  assert.deepEqual([...runtimeRequests.keys()].sort(),[...runtimeAssets].sort(),'runtime asset coverage');
+  const releases=new Set([...runtimeRequests.values()].flatMap(values=>[...values]));
+  assert.equal(releases.size,1,'runtime files use inconsistent cache versions');
+  assert.ok(!releases.has(''),'new page requested a legacy unversioned runtime file');
+  report.assertions.push('Browser and search worker load one consistently versioned runtime, independent of old unversioned cache entries');
 } catch(error) {
   report.failure=error.message;
   if(page){ report.body=await page.locator('body').innerText().catch(()=> 'Page unavailable'); await capture('failure').catch(()=>{}); }
   console.error(JSON.stringify(report,null,2));
   process.exitCode=1;
 } finally {
+  report.runtimeAssets=Object.fromEntries([...runtimeRequests].map(([asset,versions])=>[asset,[...versions]]));
   await writeFile(resolve(output,'report.json'),JSON.stringify(report,null,2));
   await browser?.close();
   await new Promise(resolve=>server.close(resolve));

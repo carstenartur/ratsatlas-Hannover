@@ -3,10 +3,10 @@
  * daimpad/ratsatlas-bonn@f8850008e81825ae79be49ca7f3441b928a1858b (MIT).
  * The verified AtlasData store, qualified identifiers and original geometries
  * remain the data authority. No Bonn-only datasets or legal rules are used. */
-import {AtlasData} from './data.js';
-import {LEVELS, readState, writeState} from './view-state.js';
-import {createBonnPanels} from './bonn-panels.js';
-import {createHannoverTimeline} from './timeline-adapter.js';
+import {AtlasData} from './data.js?v=bonn-20261121-1';
+import {LEVELS, readState, writeState} from './view-state.js?v=bonn-20261121-1';
+import {createBonnPanels} from './bonn-panels.js?v=bonn-20261121-1';
+import {createHannoverTimeline} from './timeline-adapter.js?v=bonn-20261121-1';
 
 const $ = id => document.getElementById(id);
 const format = n => Number(n).toLocaleString('de-DE');

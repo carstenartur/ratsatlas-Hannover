@@ -1,5 +1,5 @@
-import { SearchIndex } from './search.js';
-import { verifiedJson } from './data.js';
+import { SearchIndex } from './search.js?v=bonn-20261121-1';
+import { verifiedJson } from './data.js?v=bonn-20261121-1';
 
 let indexPromise;
 self.onmessage = async ({ data }) => {

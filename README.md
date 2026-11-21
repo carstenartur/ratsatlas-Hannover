@@ -169,6 +169,15 @@ Datenarchiv wird davor entpackt. Dafür muss im Repository unter
 eingerichtet sein. Einen erfolgreichen Lauf und die tatsächlich erreichbare
 Adresse vor einer Bekanntgabe kontrollieren.
 
+Anwendungsdateien werden mit einer gemeinsamen Versionskennung in ihren URLs
+geladen (derzeit `v=bonn-20261121-1`). Bei Änderungen an JavaScript oder den
+Anwendungsstylesheets diese Kennung in `index.html` und der gesamten
+Import-/Worker-Kette erneuern. Relative Modulimporte übernehmen den
+Versionsparameter ihres Elternmoduls nicht automatisch. Die Browserprüfung
+erfasst deshalb auch die tatsächlichen Worker-Anfragen und verlangt eine
+einheitliche, nicht leere Version. Die Datenpfade und geteilten Recherche-URLs
+bleiben davon unberührt.
+
 Die geerbte Plesk-Veröffentlichung, IndexNow-Meldungen und Live-Prüfungen gegen
 ratsatlas.de sind aus den aktiven Workflows entfernt. Es gibt keinen neuen
 Zeitplan und keine Veröffentlichung in ein fremdes Repository.
