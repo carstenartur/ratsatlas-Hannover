@@ -77,7 +77,8 @@ try {
   await page.locator('.map-popup button').first().waitFor();
   await page.locator('#levels input[value="city"]').uncheck();
   await hits(0);
-  assert.equal(await page.locator('.map-popup').count(), 0);
+  // Leaflet removes the faded-out popup from the DOM after its 200ms transition.
+  await page.locator('.map-popup').waitFor({ state: 'detached' });
   report.assertions.push('Highlighted geometry remains clickable; filtered-out popup closes');
 
   // All Landtag records are searchable without fictitious points.
