@@ -27,6 +27,19 @@ def place(geometry_id, kind, coordinates, record_ids):
     }
 
 
+def neighborhood(number, parent, west, east):
+    boundary = district(number, west, east)
+    boundary["properties"].update(areaId=f"stadtteil:{number}", kind="stadtteil", parentId=f"bezirk:{parent}")
+    return boundary
+
+
+def scoped_place(geometry_id, boundary, record_ids):
+    geometry = boundary["geometry"]
+    feature = place(geometry_id, geometry["type"], geometry["coordinates"], record_ids)
+    feature["properties"].update(kind="area", areaId=boundary["properties"]["areaId"])
+    return feature
+
+
 class GeographyTests(unittest.TestCase):
     def test_membership_uses_geometry_intersections_and_unique_qualified_ids(self):
         features = [
@@ -41,6 +54,41 @@ class GeographyTests(unittest.TestCase):
         self.assertEqual(areas[0]["properties"]["recordIds"], ["region:1", "stadt:1", "stadt:2"])
         self.assertEqual(areas[1]["properties"]["geometryIds"], ["project", "street"])
         self.assertEqual(areas[1]["properties"]["recordIds"], ["region:1", "stadt:1", "stadt:4"])
+
+    def test_scoped_geometries_follow_official_membership_at_shared_boundaries(self):
+        boundaries = [district("01", 0, 1), district("02", 1, 2),
+                      neighborhood("10", "01", 0.5, 1), neighborhood("11", "01", 0, 0.5),
+                      neighborhood("12", "02", 1, 1.5)]
+        places = [scoped_place("district", boundaries[0], ["stadt:1"]),
+                  scoped_place("neighborhood", boundaries[2], ["stadt:2"])]
+        areas = project_geography(boundaries, places)
+        self.assertEqual(
+            [(area["properties"]["areaId"], area["properties"]["geometryIds"], area["properties"]["recordIds"])
+             for area in areas],
+            [("bezirk:01", ["district", "neighborhood"], ["stadt:1", "stadt:2"]),
+             ("bezirk:02", [], []),
+             ("stadtteil:10", ["neighborhood"], ["stadt:2"]),
+             ("stadtteil:11", [], []),
+             ("stadtteil:12", [], [])],
+        )
+
+    def test_rejects_unknown_or_missing_scoped_area_ids(self):
+        boundaries = [district("01", 0, 1)]
+        for area_id in ("bezirk:99", None):
+            with self.subTest(area_id=area_id):
+                location = scoped_place("district", boundaries[0], ["stadt:1"])
+                del location["properties"]["areaId"]
+                if area_id is not None:
+                    location["properties"]["areaId"] = area_id
+                with self.assertRaisesRegex(ValueError, "Gebietskennung"):
+                    project_geography(boundaries, [location])
+
+    def test_rejects_scoped_geometry_different_from_its_official_polygon(self):
+        boundaries = [district("01", 0, 1), district("02", 1, 2)]
+        location = scoped_place("district", boundaries[1], ["stadt:1"])
+        location["properties"]["areaId"] = "bezirk:01"
+        with self.assertRaisesRegex(ValueError, "Gebietsfläche"):
+            project_geography(boundaries, [location])
 
     def test_official_snapshot_includes_each_named_district_and_neighborhood(self):
         boundaries, source = load_boundaries()

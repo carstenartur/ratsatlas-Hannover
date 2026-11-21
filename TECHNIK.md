@@ -25,7 +25,7 @@ keinen Anwendungsserver, keine Datenbank im Betrieb und keinen API-Schlüssel.
 | `data/hannover-snapshot.tar.gz.part*`, `data/hannover-snapshot.parts.json`, `data/hannover-snapshot.sha256` | Versioniertes vollständiges Archiv in vier überprüfbaren Teilen |
 | `site/data/ris/` | Entpacktes Quellpaket, abgeleitete Such- und Kartendateien, Importnachweis |
 | `site/data/enriched/` | Reproduzierbare kombinierte Such- und Kartendaten, ergänzte Ortsbelege und Gebietszählungen |
-| `data/geocoding/`, `scripts/enrich_locations.py` | Versioniertes LGLN-Ortsverzeichnis und städtischer Projektmarker, ergänzende Verortung und Offlineprüfung |
+| `data/geocoding/`, `scripts/enrich_locations.py`, `scripts/geocoding_geometry.py`, `scripts/geocoding_areas.py` | Versioniertes LGLN-Ortsverzeichnis und städtischer Projektmarker, ergänzende Verortung und Offlineprüfung |
 | `data/geography/`, `scripts/build_geography.py`, `requirements-geo.txt` | Amtliche SKH5-Flächen, Shapely und Zuordnung der Kartenorte zu Bezirken und Stadtteilen |
 | `site/map-geography.js` | Bonner Gebietsnavigation für Hannover mit Flächenfarben, Beschriftung, Legende und Auswahl |
 | `scripts/snapshot_bundle.py` | Archiv packen und für lokale Nutzung oder Deployment entpacken |
@@ -134,6 +134,14 @@ abgeglichen. Für den Bumke-Standort verwendet der Build den städtischen
 Projektmarker und amtliche Belege für die Zuordnung zum Vorhaben. Ergebnisse und
 Grenzen der Regeln stehen in der [Datenbeschreibung](docs/DATEN.md#wie-die-ergänzten-kartenorte-entstehen).
 
+Der Resolver priorisiert belegte Projektpunkte, Titeladressen, nachgewiesene
+Dokumentadressen und eindeutige Straßen-/Kreuzungsbezüge vor ausdrücklich benannten
+Gebieten. `geocoding_geometry.py` liefert tatsächliche, kompakte und örtlich
+verbundene Schnittpunkte; `geocoding_areas.py` liefert amtliche Polygone mit
+Gebietskennung. Jeder ergänzte Ortsbeleg trägt Quelle, Beleg, Methode und Genauigkeit.
+`byAccuracy` und `areaOnlyRecordCount` trennen die groben Gebietsangaben in der
+Statistik von den übrigen Verortungen.
+
 Die Ausgaben liegen in `site/data/enriched/`. Das Manifest `enrichment.json`
 bindet die Dateien an Generation und SHA-256 des ursprünglichen RIS-Manifests.
 Aus den Dateideskriptoren überprüft der Client Größe und Prüfsumme des
@@ -143,14 +151,17 @@ separat prüfbaren Originalimport.
 | Datei | Aufgabe |
 |---|---|
 | `search-index.json.gz` | Alle Originalzeilen, ergänzt um belegte Ortsnamen und den entsprechenden Verortungsstatus. |
-| `map.geojson.gz` | Alle 3.395 ursprünglichen Features sowie 533 zusätzliche Features mit qualifizierten Vorgangs-IDs. |
+| `map.geojson.gz` | Alle 3.395 ursprünglichen Features sowie 1.238 zusätzliche Features mit qualifizierten Vorgangs-IDs. |
 | `additions.json.gz` | Nach Vorgangs-ID geordnete zusätzliche Ortsbelege, Genauigkeiten und Geometrie-IDs für die Detailansicht. |
-| `geography.json.gz` | 13 Bezirke und 51 Stadtteile mit Gebietskennungen, Anzeigegeometrien, Schnittmengen und eindeutigen Vorgangs-IDs. |
+| `geography.geojson.gz` | 13 Bezirke und 51 Stadtteile mit Gebietskennungen, Anzeigegeometrien, Schnittmengen und eindeutigen Vorgangs-IDs. |
 
 `scripts/build_geography.py` prüft den Stand der ergänzten Karte. Ein räumlicher
 Index und `intersects` in Shapely ordnen ihre Punkte, Linien und Flächen den
 unvereinfachten amtlichen SKH5-Grenzen zu. Je Gebiet werden die Vorgangs-IDs
-dedupliziert. Die Darstellungsflächen werden separat vereinfacht. Die Gebietsdatei
+dedupliziert. Ergänzte Flächen mit `properties.areaId` und `kind: "area"`
+werden stattdessen semantisch nur ihrem eigenen Gebiet und bei Stadtteilen dem
+Elternbezirk zugewiesen. Der Build lehnt unbekannte Kennungen und von der
+amtlichen Fläche abweichende Geometrien ab. Die Darstellungsflächen werden separat vereinfacht. Die Gebietsdatei
 enthält neben der Quellgeneration die SHA-256 der ergänzten Kartenprojektion.
 [Gebietsgrenzen und Datenstand](data/geography/source.json)
 
@@ -185,7 +196,10 @@ geprüften Projektionen anhand derselben Vorgangs-ID dazugeladen.
 Die Karte startet mit grauem OSM-Hintergrund und den 13 Bezirken. Die Auswahl
 eines Bezirks zeigt die zugehörigen Stadtteile, die Auswahl eines Stadtteils
 seine Kartenorte. Auch beim freien Hineinzoomen sind ab Zoomstufe 14 die
-Ortsgeometrien zugänglich. Die Auswahl über Liste oder Vorgangsverknüpfung
+Ortsgeometrien zugänglich. Grobe Gebietsflächen bleiben dabei Polygone und werden
+vor Straßen und Punkten gezeichnet, damit die präziseren Orte anklickbar bleiben.
+Ein MultiPoint nutzt in der Übersicht einen seiner echten Punkte, in der
+Detailansicht sämtliche Punkte. Die Auswahl über Liste oder Vorgangsverknüpfung
 passt den Ausschnitt an alle Geometrien des Vorgangs und die geöffneten
 Fenster an. Die orange Hervorhebung hat eine dunkle Kontur. Bei einer Auswahl
 über die Karte, einem ausdrücklich geteilten Ausschnitt und der Wiederherstellung

@@ -1,5 +1,59 @@
 # Prüfung der Hannover-Anwendung
 
+## Erweiterte Verortung — 21. November 2026
+
+Der neue Stand baut auf PR #4 mit 9.502 Kartenorten auf. Die folgenden Zahlen
+stammen aus dem vollständigen Neubau und dessen reproduzierter Offlineprüfung.
+Die älteren Prüfberichte weiter unten behalten ihre damaligen Zahlen.
+
+| Merkmal | PR #4 | Neuer Stand |
+|---|---:|---:|
+| Vorgänge insgesamt | 109.605 | 109.605 |
+| Vorgänge mit Kartenbezug | 9.502 | 14.530 |
+| Davon ausdrücklich nur Stadtbezirk/Stadtteil bekannt | 0 | 2.469 |
+| Vorgänge ohne Kartenort | 100.103 | 95.075 |
+| Geometrien | 3.928 | 4.633 |
+| Bumke-Vorgänge mit Kartenort | 19 | 19 |
+
+**Netto 5.028 weitere Vorgänge**: 5.133 neue Zuordnungen und
+105 zurückgenommene ältere Ableitungen, deren Genauigkeit der Titel
+nicht ausreichend belegt. Die 8.004 ursprünglichen verorteten Vorgänge, alle
+3.395 Originalgeometrien und alle 6.905 Quellpartitionen bleiben unverändert.
+7.620 noch unkartierte Vorgänge haben ursprüngliche Ortsbezeichnungen.
+Sechs ursprünglich verortete Vorgänge liegen außerhalb der Hannover-Gebiete.
+
+[Maschinenlesbare Zählungen, Hashes, Beispiele und zurückgenommene Ergänzungen](qa/2026-11-21-weitere-kartenorte/data-audit.json)
+
+### Nachweise und Gegenproben
+
+Die lokale Gesamtsuite umfasst **72 Python-Tests und 45 JavaScript-Tests**.
+Der vollständige Importcheck bestätigt 109.605 Vorgänge und 6.905 gültige
+Quellpartitionen. Neubau und `enrich_locations.py --check` liefern dieselben
+Daten und Prüfsummen. Die Originaldaten werden dabei ausschließlich gelesen.
+
+Die unabhängige Prüfung verglich alle neu ausgegebenen Orte mit den amtlichen
+Referenzgeometrien und prüfte eine reproduzierbare Stichprobe je Methode. Alle
+14 zusätzlich erschlossenen benannten Projektadressen wurden am ursprünglichen
+Dokumentauszug geprüft. Zusätzlich wurden Schul-/Parknamen, zusammengesetzte
+Straßenabschnitte, unbekannte weitere Straßen, Empfängeradressen, nummerierte
+Listen, getrennte Kreuzungen und mehrdeutige Gebietsangaben mit gezielten
+Negativfällen geprüft. Die gefundenen Fehlzuordnungen erhielten zunächst
+fehlgeschlagene Regressionen und wurden anschließend korrigiert.
+
+Die Browserprüfung in GitHub Actions erweitert die bisherigen Fälle um:
+
+- Grunderneuerung der Eckermannstraße: automatische Auswahl und anklickbare Achse.
+- Kita „Twipsy“, Ortskamp 89: sichtbarer Dokumentbeleg und bestätigte Hauskoordinate.
+- Göttinger Chaussee/Bückeburger Allee: beide echten Kreuzungspunkte hervorgehoben und anklickbar.
+- Stadtbezirk Linden-Limmer: Flächentreffer schon in der Übersicht, hervorgehobene Grenze und keine Vererbung an einzelne Stadtteile.
+- Stadtteil Ricklingen: grobe Genauigkeit sichtbar, Zugehörigkeit zum eigenen Bezirk erhalten.
+
+Die Aufnahme erfolgt in Chromium und WebKit auf Desktop, Tablet und Telefon.
+Die Berichte und Bilder liegen im Artefakt `hannover-browser-qa` des jeweils
+zugehörigen [CI-Laufs](https://github.com/carstenartur/ratsatlas-Hannover/actions/workflows/veroeffentlichen.yml).
+PR und Veröffentlichung werden mit dem tatsächlichen Lauf verknüpft; die lokale
+Prüfung allein ist kein Nachweis für die Browserabnahme oder die öffentliche Seite.
+
 ## Kartenorte, Gebietsnavigation und Auswahl — 21. November 2026
 
 Diese Nachprüfung ersetzt die frühere Freigabe für die drei gemeldeten

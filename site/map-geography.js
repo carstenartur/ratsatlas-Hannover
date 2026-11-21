@@ -52,6 +52,7 @@ function alongLine(line, distance, lengths) {
 
 export function overviewPoint({type, coordinates}) {
   if (type === 'Point') return coordinates;
+  if (type === 'MultiPoint') return coordinates[0] || null;
   const lines = {
     LineString: () => [coordinates],
     MultiLineString: () => coordinates,
@@ -72,6 +73,22 @@ export function overviewPoint({type, coordinates}) {
     }
   }
   return alongLine(longest, length / 2, distances);
+}
+
+export function mapDisplayFeatures(features, detail) {
+  const areas = [], places = [];
+  for (const feature of features) {
+    if (feature.properties.kind === 'area') {
+      areas.push(feature);
+    } else if (detail) {
+      places.push(feature);
+    } else {
+      const coordinates = overviewPoint(feature.geometry);
+      if (coordinates) places.push({...feature, geometry:{type:'Point',coordinates}});
+    }
+  }
+  // Draw broad area hit regions below individual streets and markers.
+  return [...areas, ...places];
 }
 
 // The current filter determines the colour ramp for each level, using the

@@ -7,8 +7,10 @@ recherchieren.**
 Dieser Ratsatlas übernimmt den veröffentlichten Hannover-RIS-Datenstand der
 [Unfallwerkbank](https://carstenartur.github.io/Unfallatlas/) in eine statische
 Anwendung. Karte, Fenstersteuerung und Zeitleiste basieren auf Ratsatlas Bonn
-von Damian Paderta. **9.502 Vorgänge haben einen Kartenort.** Die Gesamtsuche
-umfasst auch die 100.103 Vorgänge ohne Geometrie.
+von Damian Paderta. **14.530 Vorgänge haben einen Kartenbezug:** 12.061 mit vorhandener Geometrie,
+belegtem Standort, Straße oder Kreuzung und 2.469 mit ausdrücklich benanntem
+Stadtbezirk oder Stadtteil. Die Gesamtsuche
+umfasst auch die 95.075 Vorgänge ohne Kartenbezug.
 [Ratsatlas Bonn](https://bonn.ratsatlas.de/)
 
 [Technik](TECHNIK.md) · [Datenherkunft und Grenzen](docs/DATEN.md) ·
@@ -49,18 +51,27 @@ Diese Anwendung dient der Recherche in den Rats- und Parlamentsvorgängen.
 
 | Quellenebene | Vorgänge | Mit Geometrie im Quellpaket | Mit Kartenort im Ratsatlas | Ohne Kartenort im Ratsatlas |
 |---|---:|---:|---:|---:|
-| Stadt Hannover | 95.535 | 7.969 | 9.467 | 86.068 |
+| Stadt Hannover | 95.535 | 7.969 | 14.495 | 81.040 |
 | Region Hannover | 14.055 | 35 | 35 | 14.020 |
 | Land Niedersachsen | 15 | 0 | 0 | 15 |
-| **Gesamt** | **109.605** | **8.004** | **9.502** | **100.103** |
+| **Gesamt** | **109.605** | **8.004** | **14.530** | **95.075** |
 
-Die Karte enthält **3.928 Geometrien**. Zu den **3.395 Originalgeometrien**
-kommen **533** Kartenobjekte mit eigener Kennung. Die Ergänzung erschließt **1.498 weitere Vorgänge** anhand amtlicher
-Hauskoordinaten, Straßenachsen und des belegten Projektstandorts des ehemaligen
-Bumke-Areals. Die Suche nach „Bumke“ führt zu 19 Vorgängen in der Nordstadt,
-darunter zum Bebauungsplan 1862 und zur Petition für das Gelände. Ein Kartenort
-kann zu mehreren Vorgängen gehören. Bei aufgehobenem Zeitfilter sind auch die
-16 Vorgänge ohne Datum durchsuchbar. [Verfahren und Grenzen](docs/DATEN.md#wie-die-ergänzten-kartenorte-entstehen)
+Die Karte enthält **4.633 Geometrien**. Zu den **3.395 Originalgeometrien**
+kommen **1.238** Kartenobjekte mit eigener Kennung. Die Ergänzung erschließt
+**6.526 weitere Vorgänge** anhand amtlicher Hauskoordinaten, Straßenachsen,
+Kreuzungen, Gebietsflächen und des belegten Bumke-Projektstandorts. Gegenüber dem
+vorherigen Stand mit 9.502 Kartenorten sind es netto **5.028 weitere Vorgänge**.
+
+Die **2.469 groben Gebietsbezüge** tragen „Nur Stadtbezirk bekannt“ oder
+„Nur Stadtteil bekannt“. Die Karte zeigt dafür die amtliche Fläche. Daraus
+folgt kein genauer Maßnahmenstandort; eine reine Bezirksangabe wird keinem
+Einzelstadtteil zugerechnet. Ein Straßenverlauf dient ebenfalls der Orientierung
+und bezeichnet keinen punktgenauen Standort.
+
+Die Suche nach „Bumke“ führt weiterhin zu allen 19 bestätigten Vorgängen in der
+Nordstadt. Ein Kartenort kann zu mehreren Vorgängen gehören. Bei aufgehobenem
+Zeitfilter sind auch die 16 Vorgänge ohne Datum durchsuchbar.
+[Verfahren, Zahlen und Grenzen](docs/DATEN.md#wie-die-ergänzten-kartenorte-entstehen)
 
 | Zeitangabe | Bedeutung |
 |---|---|

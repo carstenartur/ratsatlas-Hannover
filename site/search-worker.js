@@ -1,5 +1,5 @@
-import { SearchIndex } from './search.js?v=kartenorte-20261121-4';
-import { verifiedJson } from './data.js?v=kartenorte-20261121-4';
+import { SearchIndex } from './search.js?v=kartenorte-20261121-5';
+import { verifiedJson } from './data.js?v=kartenorte-20261121-5';
 
 let indexPromise;
 self.onmessage = async ({ data }) => {

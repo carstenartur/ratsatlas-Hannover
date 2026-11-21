@@ -2,7 +2,7 @@
 """Build the Hannover area overlay from official boundaries and the enriched map."""
 
 import argparse
-from collections import Counter
+from collections import Counter, defaultdict
 import gzip
 from hashlib import sha256
 import json
@@ -55,11 +55,31 @@ def project_geography(boundaries, locations):
     place_shapes = [shape(feature['geometry']) for feature in locations]
     if any(place.is_empty or not place.is_valid for place in place_shapes):
         raise ValueError('Die Kartenprojektion enthält leere oder ungültige Geometrien.')
-    index = STRtree(place_shapes)
+    boundaries_by_id = {feature['properties']['areaId']: feature for feature in boundaries}
+    ordinary_positions = []
+    explicit_positions = defaultdict(list)
+    for position, location in enumerate(locations):
+        properties = location['properties']
+        if 'areaId' not in properties and properties.get('kind') != 'area':
+            ordinary_positions.append(position)
+            continue
+        area_id = properties.get('areaId')
+        boundary = boundaries_by_id.get(area_id) if isinstance(area_id, str) else None
+        if boundary is None:
+            raise ValueError(f'Ungültige Gebietskennung am Kartenort {place_ids[position]}: {area_id!r}')
+        if location['geometry'] != boundary['geometry']:
+            raise ValueError(f'Kartenort {place_ids[position]} weicht von der amtlichen Gebietsfläche {area_id} ab.')
+        explicit_positions[area_id].append(position)
+        parent = boundary['properties']['parentId']
+        if parent is not None:
+            explicit_positions[parent].append(position)
 
+    index = STRtree([place_shapes[position] for position in ordinary_positions])
     features = []
     for boundary, area in zip(boundaries, areas):
-        contained = index.query(area, predicate='intersects').tolist()
+        area_id = boundary['properties']['areaId']
+        contained = [ordinary_positions[position] for position in index.query(area, predicate='intersects')]
+        contained.extend(explicit_positions[area_id])
         geometry_ids = sorted(place_ids[position] for position in contained)
         record_ids = sorted({
             record_id for position in contained for record_id in locations[position]['properties']['recordIds']
