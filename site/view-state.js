@@ -1,4 +1,4 @@
-import { isoDay } from './search.js';
+import { isoDay } from './search.js?v=bonn-20261121-1';
 
 export const LEVELS = ['city','region','state'];
 export const PANELS = ['list','detail','timeline'];

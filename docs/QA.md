@@ -106,6 +106,19 @@ ersetzt keine Vollständigkeitsprüfung der amtlichen Archive. Die bekannten
 Erfassungslücken und unterschiedlichen Quellenstände bleiben in der
 Anwendung und in [DATEN.md](DATEN.md) dokumentiert.
 
+## Nachprüfung des öffentlichen Deployments
+
+Der erste Live-Aufruf nach dem Bonn-Deployment zeigte eine gemischte
+Cache-Version: Die neue HTML-Seite wurde mit der alten `app.js` ausgeführt.
+Der Fehler `Cannot set properties of null (setting 'oninput')` an Zeile 298
+gehörte zum alten Suchfeld `query`; die neue Seite verwendet `q`.
+Daraufhin erhalten HTML-Verweise, Modulimporte und Such-Worker eine gemeinsame
+Versionskennung. Ein zusätzlicher Browser-Prüfpunkt erfasst alle zehn
+betroffenen Runtime-Dateien einschließlich Worker-Anfragen und verlangt eine
+einheitliche, nicht leere Version. Der abschließende CI- und Live-Nachweis
+wird im zugehörigen Korrektur-PR festgehalten; die fachliche Oberfläche und
+der Datenbestand der oben dokumentierten Bilder bleiben gleich.
+
 ## Historischer Nachweis
 
 Der [Prüfbericht des ersten Hannover-Imports](qa/2026-11-21/README.md)
