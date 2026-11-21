@@ -17,6 +17,7 @@ export function createBonnPanels({onChange = () => {}, onLayout = () => {}} = {}
   const getState = () => SHEETS.filter(id => !$(id).hidden).map(id => KEYS[id]);
   const equal = (a,b) => a.length === b.length && a.every((v,i) => v === b[i]);
   function refreshLayout() {
+    clampWidths();
     $('map-view').setAttribute('aria-pressed', String(!getState().length));
     requestAnimationFrame(onLayout);
   }
@@ -100,11 +101,17 @@ export function createBonnPanels({onChange = () => {}, onLayout = () => {}} = {}
     detail:{v:'--detail-w', min:340, max:() => Math.min(760,innerWidth * .5), def:420}
   };
   const widthOf = key => parseFloat(document.documentElement.style.getPropertyValue(WIDTH[key].v)) || WIDTH[key].def;
+  function maxWidth(key) {
+    const other = key === 'list' ? 'detail' : 'list';
+    const allVisible = !MOBILE.matches && !$('timeline-wrap').hidden && !$('panel-list').hidden && !$('panel-detail').hidden;
+    const available = allVisible ? innerWidth - 64 - 320 - widthOf(other) : Infinity;
+    return Math.max(WIDTH[key].min,Math.min(WIDTH[key].max(),available));
+  }
   function setWidth(key, px, save) {
-    const w = WIDTH[key], value = Math.round(Math.max(w.min,Math.min(w.max(),px)));
+    const w = WIDTH[key], max = maxWidth(key), value = Math.round(Math.max(w.min,Math.min(max,px)));
     document.documentElement.style.setProperty(w.v,value + 'px');
     const handle = document.querySelector(`.resizer[data-resize="${key}"]`);
-    handle.setAttribute('aria-valuemin',String(w.min)); handle.setAttribute('aria-valuemax',String(Math.round(w.max())));
+    handle.setAttribute('aria-valuemin',String(w.min)); handle.setAttribute('aria-valuemax',String(Math.round(max)));
     handle.setAttribute('aria-valuenow',String(value)); handle.setAttribute('aria-valuetext',`${value} Pixel breit`);
     if (save) { try { localStorage.setItem('ratsatlas-hannover-breite-' + key,String(value)); } catch { /* optional preference */ } }
   }
@@ -164,6 +171,7 @@ export function createBonnPanels({onChange = () => {}, onLayout = () => {}} = {}
     if (inside) { event.preventDefault(); closePanel(inside); }
   });
   MOBILE.addEventListener('change',applyLayout); NARROW.addEventListener('change',applyLayout);
+  window.addEventListener('resize',applyLayout);
   // Initial layout is silent; application state is applied immediately afterward.
   $('timeline-wrap').classList.toggle('tl-compact',MOBILE.matches); clampWidths();
   return {setPanel, closePanel, closeAll, setState, getState, focusPanel, setNav, isMobile:() => MOBILE.matches};

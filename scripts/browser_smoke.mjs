@@ -92,6 +92,13 @@ try {
   await page.locator('#detail [data-related="hannover-sim:1047-2026"]').click();
   await page.waitForFunction(()=>new URL(location.href).searchParams.get('vorgang')==='hannover-sim:1047-2026');
   await page.locator('#detail [data-related="hannover-sim:1047-2026F1"]').waitFor();
+  await page.goBack();
+  await page.locator('#detail [data-related="hannover-sim:1047-2026"]').waitFor();
+  assert.equal(new URL(page.url()).searchParams.get('vorgang'),'hannover-sim:1047-2026F1');
+  await page.goForward();
+  await page.locator('#detail [data-related="hannover-sim:1047-2026F1"]').waitFor();
+  assert.equal(new URL(page.url()).searchParams.get('vorgang'),'hannover-sim:1047-2026');
+  report.assertions.push('Browser Back and Forward restore distinct linked request/answer selections');
   report.assertions.push('Rapid query/filter changes and clickable request/answer relationship preserve qualified identity');
 
   await page.goto(url);
@@ -123,6 +130,29 @@ try {
   await page.goto(sharedStreet); await hits(2);
   assert.equal(new URL(page.url()).searchParams.get('q'),new URL(sharedStreet).searchParams.get('q'));
   report.assertions.push('Street evidence, clickable original point under highlight, filtered popup removal and shared selection');
+
+  for (const [id,type,coordinate,screenshot] of [
+    ['hannover-sim:15-0071-2025','LineString',[9.860888,52.396525],'geometry-line'],
+    ['hannover-sim:15-1035-2016','Polygon',[9.71998654749,52.3707555],'geometry-polygon']
+  ]) {
+    await page.goto(url+'?fenster=detail&vorgang='+encodeURIComponent(id)); await hits(109605);
+    await page.locator('#detail-title').waitFor();
+    await page.waitForFunction(()=>document.querySelector('#map-count')?.textContent.includes('3.395'));
+    assert.match(await page.locator('#detail').innerText(),new RegExp(type));
+    await page.getByRole('button',{name:'Auf Karte zeigen',exact:true}).click();
+    await page.waitForFunction(()=>Number(new URL(location.href).searchParams.get('z'))>=14);
+    const view=new URL(page.url()).searchParams;
+    const project=([lng,lat])=>{
+      const scale=256*2**Number(view.get('z')), s=Math.sin(lat*Math.PI/180);
+      return [(lng+180)/360*scale,(.5-Math.log((1+s)/(1-s))/(4*Math.PI))*scale];
+    };
+    const point=project(coordinate), center=project([Number(view.get('lng')),Number(view.get('lat'))]);
+    const mapBox=await page.locator('#map').boundingBox();
+    await page.mouse.click(mapBox.x+mapBox.width/2+point[0]-center[0],mapBox.y+mapBox.height/2+point[1]-center[1]);
+    await page.locator(`.map-popup button[data-record="${id}"]`).waitFor();
+    await capture(screenshot);
+    report.assertions.push(`Original ${type} remains visible and clickable under selection: ${id}`);
+  }
 
   await page.goto(url+'?q=1047%2F2026&vorgang=hannover-sim%3A1047-2026F1');
   await hits(2);

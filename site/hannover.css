@@ -69,6 +69,8 @@ button:disabled:hover { transform: none; }
 #timeline-wrap .tl-bar { padding-right: 36px; }
 #timeline-wrap .timeline-close { position: absolute; top: 8px; right: 8px; width: 30px; height: 30px; z-index: 1; font-size: 19px; }
 #timeline-wrap .tl-stage { min-height: 108px; }
+#timeline-wrap .tl-status { margin: 8px 0; font-size: 13px; color: var(--text-muted); }
+#timeline-wrap .timeline-retry { margin: 8px 0; }
 .map-info { position: fixed; left: 50%; bottom: 30px; transform: translateX(-50%); z-index: 750; display: flex; align-items: center; gap: 14px; padding: 8px 14px; font-size: 12px; white-space: nowrap; max-width: calc(100vw - 32px); }
 .map-info .link-btn { font-size: 12px; }
 .source-footer { position: fixed; left: 50%; bottom: 7px; transform: translateX(-50%); z-index: 750; max-width: calc(100vw - 32px); padding: 2px 8px; border-radius: 8px; background: rgba(255,255,255,.88); color: var(--text-muted); font-size: 10px; white-space: nowrap; }
@@ -128,6 +130,8 @@ button:disabled:hover { transform: none; }
   #timeline-wrap .timeline-close { width: 44px; height: 44px; top: 6px; right: 6px; }
   #timeline-wrap .tl-bar { padding-right: 44px; }
   #timeline-wrap .tl-stage { min-height: 112px; }
+  #timeline-wrap .tl-presets { display: flex; flex-wrap: wrap; width: 100%; }
+  #timeline-wrap .tl-presets .tl-chip { flex: 1; white-space: normal; }
   .map-info { bottom: calc(103px + env(safe-area-inset-bottom)); padding: 0 10px; gap: 12px; }
   .source-footer { bottom: calc(81px + env(safe-area-inset-bottom)); font-size: 10px; }
   .leaflet-top { top: 57px; }

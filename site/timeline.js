@@ -60,7 +60,7 @@
     const o = Object.assign({ onRange() {}, onDate() {}, onSite() {}, onStateChange() {}, defaultZoom: "Quartal" }, options);
     const initialLevel = LEVELS.findIndex((l) => l.name === o.defaultZoom);
     let data = null, papers = [], selected = null, preview = false, level = initialLevel < 0 ? 1 : initialLevel, sites = [];
-    let view = [0, 1], range = [0, 1], extent = [0, 1], debounce;
+    let view = [0, 1], range = [0, 1], extent = [0, 1], debounce, unavailable = true;
 
     root.classList.add("tl");
     root.innerHTML = `
@@ -91,6 +91,7 @@
           </select>
         </label>
       </div>
+      <p class="tl-status" role="status"></p>
       <div class="tl-stage" tabindex="0" role="group"
            aria-label="Zeitleiste. Pfeiltasten verschieben, Plus und Minus zoomen, Pos1 und Ende springen."
            aria-describedby="tl-help">
@@ -111,6 +112,16 @@
     const dimSel = root.querySelector("[data-act=dim]");
     const LAYOUT = { mini: [0, 14], density: [20, 70], meet: [74, 98], ctx: [100, 110], sel: [112, 128], bau: [131, 145] };
     const H = () => (sites.length ? 146 : 130);  // Höhe der Zeichenfläche; die Baustellenspur nur bei Bedarf
+    function setStatus(message = '', busy = false) {
+      unavailable = Boolean(message);
+      root.setAttribute('aria-busy',String(busy));
+      const status = root.querySelector('.tl-status');
+      status.textContent = message; status.hidden = !message;
+      for (const control of root.querySelectorAll('button[data-act], button[data-preset], select')) control.disabled = unavailable;
+      stage.setAttribute('aria-disabled',String(unavailable)); stage.tabIndex = unavailable ? -1 : 0;
+      handles.forEach(handle => { handle.tabIndex = unavailable ? -1 : 0; });
+    }
+    setStatus('Zeitleiste wird geladen …',true);
 
     // --- Skalen ---------------------------------------------------------------------------------
     // Breite nur beim Zeichnen lesen; sonst erzwingt jede Umrechnung ein neues Layout
@@ -333,7 +344,13 @@
         : p.steps.some((s) => s.date && (s.typ === "beratung" || s.typ === "entscheidung") && t(s.date) >= a && t(s.date) <= b)).length;
       return 0;
     }
-    function setRange(a, b, silent, preserveBounds = false) {
+    function notifyRange() {
+      clearTimeout(debounce); debounce = null;
+      root.querySelector('.tl-live').textContent = `Zeitraum ${de(range[0])} – ${de(range[1])}`;
+      o.onRange(iso(range[0]), iso(range[1]));
+    }
+    function setRange(a, b, silent, preserveBounds = false, defer = false) {
+      if (!data) return;
       a = t(iso(a)); b = t(iso(b));
       if (!preserveBounds && a > b) [a, b] = [b, a];
       const bounded = (value) => Math.max(extent[0], Math.min(extent[1], value));
@@ -344,11 +361,12 @@
       const text = `${de(range[0])} – ${de(range[1])} · ${countIn(range[0], range[1])} Vorlagen`;
       root.querySelector(".tl-range").textContent = `Zeitraum: ${text}${data.undatedCount ? ` · ${data.undatedCount.toLocaleString("de-DE")} ohne Datum` : ""}`;
       clearTimeout(debounce);
-      // Ansage erst, wenn die Auswahl zur Ruhe kommt, nicht bei jeder Zeigerbewegung
-      if (!silent) debounce = setTimeout(() => {
-        root.querySelector(".tl-live").textContent = `Zeitraum ${text}`;
-        o.onRange(iso(range[0]), iso(range[1]));
-      }, 180);
+      // A completed click/key selection must be shareable immediately. Only
+      // intermediate pointer movement is coalesced; pointerup commits it.
+      if (!silent) {
+        if (defer) debounce = setTimeout(notifyRange,180);
+        else notifyRange();
+      }
     }
     // A source-check timestamp can precede the latest supplied document date.
     const fullEnd = () => (dimSel.value === "sitzung" ? extent[1] : Math.min(extent[1], t(data.dataEnd || data.dataStand)));
@@ -383,6 +401,7 @@
       achse: dimSel.value, mitte: iso((view[0] + view[1]) / 2) });
     const notifyView = () => { if (data) o.onStateChange(viewState()); };
     root.addEventListener("click", (e) => {
+      if (unavailable) return;
       const b = e.target.closest("button");
       if (!b) return;
       const act = b.dataset.act, step = LEVELS[level].step;
@@ -396,10 +415,11 @@
       if (b.dataset.preset) preset(b.dataset.preset);
       if (act && act !== "dim") notifyView();
     });
-    dimSel.addEventListener("change", () => { draw(); setRange(range[0], range[1]); });
+    dimSel.addEventListener("change", () => { if (!unavailable) { draw(); setRange(range[0], range[1]); } });
 
     let drag = null;
     stage.addEventListener("pointerdown", (e) => {
+      if (unavailable) return;
       if (e.target.classList.contains("tl-handle")) {
         drag = { kind: "handle", i: +e.target.dataset.h };
       } else {
@@ -424,7 +444,8 @@
       if (drag.kind === "handle") {
         const ms = inv(px), r = range.slice();
         r[drag.i] = ms;
-        setRange(r[0], r[1]);
+        setRange(r[0], r[1],false,false,true);
+        drag.changed = true;
       } else if (drag.kind === "pan") {
         const dx = e.clientX - drag.x, ms = (dx / W()) * (drag.view[1] - drag.view[0]);
         view = clampView([drag.view[0] - ms, drag.view[1] - ms]);
@@ -432,19 +453,23 @@
       } else if (drag.kind === "mini") {
         setLevel(level, extent[0] + (px / W()) * (extent[1] - extent[0]));
       } else if (drag.kind === "brush") {
-        setRange(drag.start, inv(px));
+        setRange(drag.start, inv(px),false,false,true);
+        drag.changed = true;
       }
     });
     stage.addEventListener("pointerup", () => {
       if (drag && (drag.kind === "pan" || drag.kind === "mini")) notifyView();
+      if (drag?.changed) notifyRange();
       drag = null;
     });
     stage.addEventListener("dblclick", (e) => {
+      if (unavailable) return;
       const rect = stage.getBoundingClientRect();
       setLevel(level + 1, inv(e.clientX - rect.left));
       notifyView();
     });
     stage.addEventListener("wheel", (e) => {
+      if (unavailable) return;
       if (e.ctrlKey || e.metaKey) {
         e.preventDefault();
         const rect = stage.getBoundingClientRect();
@@ -457,7 +482,7 @@
       }
     }, { passive: false });
     stage.addEventListener("keydown", (e) => {
-      if (e.target !== stage) return;
+      if (unavailable || e.target !== stage) return;
       const step = LEVELS[level].step;
       const keys = { ArrowLeft: () => pan(-step), ArrowRight: () => pan(step), "+": () => setLevel(level + 1),
         "-": () => setLevel(level - 1), Home: () => setLevel(level, extent[0] + LEVELS[level].span / 2),
@@ -465,6 +490,7 @@
       if (keys[e.key]) { e.preventDefault(); keys[e.key](); notifyView(); }
     });
     handles.forEach((hd) => hd.addEventListener("keydown", (e) => {
+      if (unavailable) return;
       const i = +hd.dataset.h, r = range.slice(), step = LEVELS[level].bin === "month" ? 30 : 1;
       const map = { ArrowLeft: -step, ArrowDown: -step, ArrowRight: step, ArrowUp: step, PageDown: -365, PageUp: 365 };
       if (map[e.key] !== undefined) r[i] = addDays(r[i], map[e.key]);   // Kalendertage, auch über die Zeitumstellung
@@ -478,6 +504,7 @@
     new ResizeObserver(() => draw()).observe(stage);
 
     return {
+      setStatus,
       setData(d) {
         data = d;
         if (d.dimensions) {
@@ -496,6 +523,7 @@
         if (range[0] === 0) { range = [extent[0], fullEnd()]; setLevel(level, Date.now() - LEVELS[level].span / 3); }
         table();
         setRange(range[0], range[1], true);
+        setStatus('',false);
       },
       setPapers(p) { papers = p || []; if (data) setRange(range[0], range[1], true); },
       setSites(list) { sites = list || []; draw(); },

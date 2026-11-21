@@ -75,6 +75,7 @@ export function createHannoverTimeline(element, { onRange = () => {}, onReset = 
   }
 
   return {
+    setStatus(message, busy) { timeline.setStatus(message,busy); },
     update(result, { state: next = state, manifest = {} } = {}) {
       data = timelineData(result.timeline, manifest);
       timeline.setData(data);

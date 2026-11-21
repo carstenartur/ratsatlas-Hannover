@@ -68,6 +68,9 @@ const timeline = createHannoverTimeline($('timeline-wrap'), {
 const timelineClose = button('×',() => panels.closePanel('timeline-wrap'),'icon-btn timeline-close');
 timelineClose.setAttribute('aria-label','Zeitleiste einklappen');
 $('timeline-wrap').append(timelineClose);
+const timelineRetry = button('Zeitleiste erneut laden',() => ready ? runSearch() : location.reload(),'btn btn-secondary timeline-retry');
+timelineRetry.hidden = true;
+$('timeline-wrap').append(timelineRetry);
 
 function update(patch, replace = false) {
   state = {...state,...patch};
@@ -106,6 +109,7 @@ function render() {
 }
 async function runSearch() {
   const version = ++searchVersion;
+  timeline.setStatus('Zeitleiste wird aktualisiert …',true); timelineRetry.hidden = true;
   map?.closePopup();
   $('count').textContent = 'Suche läuft …'; $('papers').setAttribute('aria-busy','true');
   try {
@@ -138,6 +142,8 @@ async function runSearch() {
     drawFeatures();
   } catch (error) {
     if (version !== searchVersion) return;
+    timeline.setStatus('Zeitleiste nicht verfügbar. ' + (error.message || 'Der Suchindex konnte nicht geladen werden.'),false);
+    timelineRetry.hidden = false;
     $('count').textContent = 'Suche nicht verfügbar';
     const row = node('li',null,'empty-list');
     row.append(node('p',error.message || 'Der Suchindex konnte nicht geladen werden.','error-message'),button('Suche erneut laden',runSearch));
@@ -395,7 +401,7 @@ async function renderRecord() {
     timeline.select(data); highlightRecord(data);
     document.title = `${record.number || record.title} – Ratsatlas Hannover`;
     $('announce').textContent = `Vorgang ${record.number || ''} geöffnet: ${record.title || record.id}`;
-    if (!$('panel-detail').hidden) title.focus({preventScroll:true});
+    if (!$('panel-detail').hidden && document.activeElement === $('detail-heading')) title.focus({preventScroll:true});
   } catch (error) {
     if (state.record !== id || version !== detailVersion) return;
     body.replaceChildren(node('h3','Vorgang nicht verfügbar'),node('p',error.message || 'Die Daten konnten nicht geladen werden.','error-message'),button('Erneut laden',renderRecord));
@@ -469,6 +475,7 @@ try {
 } catch (error) {
   $('count').textContent = 'Daten nicht verfügbar';
   const message = error.message || 'Der Datenbestand konnte nicht geladen werden.';
+  timeline.setStatus('Zeitleiste nicht verfügbar. ' + message,false); timelineRetry.hidden = false;
   $('detail').replaceChildren(node('h3','Datenbestand nicht verfügbar'),node('p',message,'error-message'),button('Seite neu laden',() => location.reload()));
   $('status-body').replaceChildren(node('p',message,'error-message'),button('Seite neu laden',() => location.reload()));
   const row = node('li',null,'empty-list'); row.append(node('p',message),button('Seite neu laden',() => location.reload())); $('papers').replaceChildren(row);
