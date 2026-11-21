@@ -21,7 +21,7 @@ bytegleich mit dem Lizenztext dieses Forks. [Bonner Lizenz](https://github.com/d
 | `site/style.css` | [`site/style.css`](../site/style.css) | Original-Stylesheet für die vollflächige Karte, Navigation, Fenster und Zeitleiste. Hannover-spezifische Regeln stehen in [`site/hannover.css`](../site/hannover.css). |
 | `site/index.html` | [`site/index.html`](../site/index.html) | Abgeleitete Struktur der Karte, Navigation, Liste, Detailansicht und Zeitleiste. Hannover ergänzt Such- und Quellenfilter, Datenstatus, Teilen und eigene Metadaten. |
 | `site/app.js` | [`site/bonn-panels.js`](../site/bonn-panels.js), [`site/app.js`](../site/app.js) | Abgeleitete Fenstersteuerung für Liste, Vorgang und Zeitleiste, inklusive Fokus, mobiler Navigation und Größenänderung per Zeiger und Tastatur. Auch die Darstellung von Liste, Details und Verfahrensschritten folgt dem Bonner Aufbau. |
-| `site/timeline.js` | [`site/timeline.js`](../site/timeline.js) | Bonner Zeitleiste mit Anpassungen für Tagesaggregate, verfügbare Spuren, getrennten Quellenprüfstand und Datenzeitraum, das Aufheben des Zeitfilters sowie die URL-Anbindung für Zoom und Mittelpunkt. |
+| `site/timeline.js` | [`site/timeline.js`](../site/timeline.js) | Bonner Zeitleiste mit Anpassungen für Tagesaggregate, verfügbare Spuren, getrennten Quellenprüfstand und Datenzeitraum, das Aufheben des Zeitfilters sowie die URL-Anbindung für Zoom und Mittelpunkt. Lade- und Fehlerzustände sperren datenabhängige Eingaben; abgeschlossene Zeitfilteränderungen werden sofort übernommen. |
 
 [`site/app.js`](../site/app.js) bindet die übernommenen Komponenten an den
 bereits vorhandenen Hannover-Datenzugriff `AtlasData` an. Der
@@ -32,6 +32,12 @@ für bisherige Links und ergänzt Datum, Fensterzustand sowie Zoom und
 Mittelpunkt der Zeitleiste. Das frühere Hannover-Stylesheet `site/app.css`
 entfällt. Die vorhandenen Klassen für Datenschutz und 404-Seite liegen in
 [`site/portal.css`](../site/portal.css).
+
+Die Hannover-Anbindung erhält den Suchfokus bei verspätet geladenen Details,
+reserviert beim Vergrößern der Seitenfenster Platz für die Zeitleiste und
+zeigt deren Zeitvorgaben einschließlich Zurücksetzen auch auf dem Telefon.
+Datumsgrenzen aus geteilten Links bleiben logisch unverändert, selbst wenn
+sie außerhalb des Datenzeitraums liegen. [Prüfnachweise](QA.md)
 
 ## Datenabhängige Bonner Funktionen
 

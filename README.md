@@ -147,15 +147,19 @@ npm run test:browser
 BROWSER_ENGINE=webkit npm run test:browser
 ~~~
 
-Der CI-Lauf bewahrt diese Bilder und den Prüfbericht als Artefakt
-`hannover-browser-qa` auf. Der Prüfbericht ordnet Ergebnisse und Bilder dem
-jeweiligen Anwendungsstand zu. [Prüfberichte](docs/QA.md)
+Der CI-Lauf bewahrt diese Bilder und die getrennten Berichte
+`chromium/report.json` und `webkit/report.json` im Artefakt
+`hannover-browser-qa` auf, auch bei einem fehlgeschlagenen Test. Die Berichte
+enthalten die Ergebnisse und Bildnamen; der zugehörige CI-Lauf nennt den
+geprüften Commit. Dauerhaft festgehaltene Nachweise stehen unter
+[Prüfberichte](docs/QA.md).
 
 ## Veröffentlichung
 
-Vorgesehene Adresse:
+Projektadresse:
 [carstenartur.github.io/ratsatlas-Hannover/](https://carstenartur.github.io/ratsatlas-Hannover/).
-**Die Konfiguration allein bedeutet noch nicht, dass die Seite veröffentlicht ist.**
+Der veröffentlichte Stand ergibt sich aus dem letzten erfolgreichen
+[Pages-Lauf auf main](https://github.com/carstenartur/ratsatlas-Hannover/actions/workflows/veroeffentlichen.yml?query=branch%3Amain).
 
 Der Workflow [Prüfen und veröffentlichen](.github/workflows/veroeffentlichen.yml)
 prüft Pull Requests und Änderungen auf main. Nur ein erfolgreicher Push-Lauf
