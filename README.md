@@ -1,30 +1,39 @@
 # Ratsatlas Hannover
 
 **109.605 öffentliche Vorgänge aus Stadt Hannover, Region Hannover und dem
-Niedersächsischen Landtag gemeinsam recherchieren – mit Originalquellen,
-Ortsbelegen und Karte.**
+Niedersächsischen Landtag auf Karte, in der Liste und auf der Zeitleiste
+recherchieren.**
 
 Dieser Ratsatlas übernimmt den veröffentlichten Hannover-RIS-Datenstand der
-[Unfallwerkbank](https://carstenartur.github.io/Unfallatlas/) in eine eigenständige
-statische Anwendung. Alle Vorgänge bleiben durchsuchbar, auch ohne Kartenort.
-Die Gestaltung beruht auf [Ratsatlas von Damian Paderta](https://ratsatlas.de/).
+[Unfallwerkbank](https://carstenartur.github.io/Unfallatlas/) in eine statische
+Anwendung. Karte, Fenstersteuerung und Zeitleiste basieren auf Ratsatlas Bonn
+von Damian Paderta. Alle Vorgänge bleiben durchsuchbar, auch ohne Kartenort.
+[Ratsatlas Bonn](https://bonn.ratsatlas.de/)
 
 [Technik](TECHNIK.md) · [Datenherkunft und Grenzen](docs/DATEN.md) ·
-[Herkunft und Lizenzen](NOTICE.md) · [Code-Lizenz](LICENSE)
+[Herkunft und Lizenzen](NOTICE.md) · [Bonner Quellstand](docs/UPSTREAM.md) ·
+[Code-Lizenz](LICENSE)
 
 ## Recherchieren
 
-- Nach Titel, Drucksachennummer oder Ortsbezeichnung suchen. Die Suche läuft im
-  Browser über den gesamten übernommenen Bestand.
-- **Stadt**, **Region** und **Land** gemeinsam oder einzeln auswählen und den
-  Zeitraum nach Jahren eingrenzen.
-- Bei Bedarf nur verortete Vorgänge anzeigen. Die Karte zeigt die vorhandenen
-  Geometrien; Vorgänge ohne Geometrie bleiben in der Liste erreichbar.
-- Einen Vorgang öffnen: Originalverweise, Ortsbelege, vorhandene Beratungsereignisse
-  und dokumentierte Beziehungen stehen in der Detailansicht.
-- Mit **Ansicht teilen** einen Link zu Suche, Filtern, Vorgang und Kartenausschnitt
-  weitergeben. Auf schmalen Bildschirmen zwischen **Liste** und **Karte** wechseln.
-- Unter **Datenstand** die Herkunft, Zeitstände und bekannten Lücken nachlesen.
+- In der Suchleiste nach Drucksachennummer, Straße, Hausnummer oder mehreren
+  Wörtern aus einem Titel suchen. Die Suche läuft im Browser über den gesamten
+  übernommenen Bestand.
+- Über **Liste**, **Zeitleiste** und **Vorgang** die Fenster über der Karte ein-
+  und ausklappen. **Karte** schließt die Fenster. Auf schmalen Bildschirmen
+  lässt sich jeweils ein Inhaltsfenster öffnen.
+- In der Liste **Stadt**, **Region** und **Land** gemeinsam oder einzeln
+  auswählen. Unter **Zeitraum und Ortsbezug** lassen sich Datumsgrenzen
+  eintragen und die Suche auf verortete Vorgänge beschränken.
+- In der Zeitleiste die Verteilung nach Vorgangsdatum erkunden und den Zeitraum
+  für Karte und Liste auswählen. **gesamter Bestand** hebt den Zeitfilter auf
+  und schließt passende Vorgänge ohne Datum wieder ein.
+- Einen Vorgang über Liste oder Karte öffnen. Im Vorgangsfenster stehen
+  Originalverweise, Ortsbelege, überlieferte Beratungsereignisse und Links zu
+  verbundenen Vorgängen.
+- Mit **Teilen** die Rechercheadresse einschließlich Suche, Filtern,
+  Kartenausschnitt, gewähltem Vorgang und offenen Fenstern kopieren. Unter
+  **Quellen** stehen der Datenstand, Herkunft und bekannte Lücken.
 
 Die Unfallanalyse ist weiterhin über den Link zur Unfallwerkbank erreichbar.
 Diese Anwendung dient der Recherche in den Rats- und Parlamentsvorgängen.
@@ -38,23 +47,24 @@ Diese Anwendung dient der Recherche in den Rats- und Parlamentsvorgängen.
 | Land Niedersachsen | 15 | 0 | 15 |
 | **Gesamt** | **109.605** | **8.004** | **101.601** |
 
-Die 8.004 verorteten Vorgänge teilen sich **3.395 Geometrien**. Ein Vorgang kann
-mehrere Ortsbezüge haben; eine Geometrie kann zu mehreren Vorgängen gehören.
-Die Übernahme erzeugt keine neuen Koordinaten, Mittelpunktmarkierungen oder
-politischen Bewertungen.
+Die 8.004 verorteten Vorgänge teilen sich **3.395 Originalgeometrien** mit
+Punkten, Linien und Flächen. Ein Vorgang kann mehrere Ortsbezüge haben. Eine
+Geometrie kann zu mehreren Vorgängen gehören. Bei aufgehobenem Zeitfilter sind
+auch die 16 Vorgänge ohne Datum durchsuchbar.
 
 | Zeitangabe | Bedeutung |
 |---|---|
-| **8. November 2026** | Überlieferter globaler Quellenprüfstand (sourceVerifiedAt); einzelne Quellen tragen zusätzlich eigene Zeitstände |
-| **15. November 2026** | Erstellung des veröffentlichten Quellpakets (provenance.builtAt) |
-| **21. November 2026** | Übernahme in diesen Ratsatlas; genauer Zeitpunkt in migration.json |
+| **8. November 2026** | Überlieferter globaler Quellenprüfstand (`sourceVerifiedAt`). Einzelne Quellen tragen zusätzlich eigene Zeitstände. |
+| **13. November 2026** | Jüngstes Vorgangsdatum im übernommenen Bestand |
+| **15. November 2026** | Erstellung des veröffentlichten Quellpakets (`provenance.builtAt`) |
+| **21. November 2026** | Übernahme in diesen Ratsatlas, dokumentiert in `migration.json` |
 
-**Vollständig übernommen ist das veröffentlichte Quellpaket, nicht das amtliche
-Gesamtarchiv.** Die Quelle kennzeichnet ihre Abdeckung als unvollständig. Für
-einzelne Jahrgänge und Detailabrufe bestehen Lücken; der Landtagsbestand umfasst
-nur 15 erschlossene Archivvorgänge. Ältere verifizierte Details bleiben mit ihrem
-ursprünglichen Stand erhalten. Der Import prüft Integrität und Verknüpfungen des
-Pakets, ruft die amtlichen Originale aber nicht erneut ab.
+Das veröffentlichte Quellpaket ist vollständig übernommen. Die Quelle
+kennzeichnet ihre Archivabdeckung als unvollständig. Für einzelne Jahrgänge und
+Detailabrufe bestehen Lücken. Der Landtagsbestand umfasst 15 erschlossene
+Archivvorgänge. Ältere verifizierte Details behalten ihren ursprünglichen Stand.
+Der Import prüft die Integrität des Pakets und die Verknüpfungen darin anhand
+der veröffentlichten Dateien.
 
 Das unveränderte Quellmanifest enthält Quellenstatus, Warnungen, Rechtehinweise
 und Erhebungsgrenzen. Es liegt zusammen mit allen Quelldateien im versionierten
@@ -64,9 +74,9 @@ in [docs/DATEN.md](docs/DATEN.md).
 
 ## Lokal starten
 
-Python 3.12 und Node.js 24 entsprechen der CI-Umgebung. Die Anwendung benötigt
-keinen Build-Schritt, keinen API-Schlüssel und keine npm-Abhängigkeiten.
-Für die automatisierte Browserprüfung wird zusätzlich Playwright installiert.
+Python 3.12 und Node.js 24 entsprechen der CI-Umgebung. Die Anwendung läuft
+nach dem Entpacken des Datenarchivs direkt als statische Website. Für die
+automatisierte Browserprüfung wird zusätzlich Playwright installiert.
 
 ~~~bash
 python3 scripts/snapshot_bundle.py unpack
@@ -127,29 +137,29 @@ python3 -m unittest discover -s tests -p 'test_*.py'
 python3 scripts/import_unfallwerkbank.py --check --output-dir site/data/ris
 ~~~
 
-Die Browserprüfung arbeitet ebenfalls mit dem tatsächlichen Datenpaket und
-erzeugt Bildschirmbilder für Desktop, Tablet und Telefon:
+Die Browserprüfung arbeitet mit dem übernommenen Datenpaket unter dem
+Projektunterpfad und erzeugt Bildschirmbilder für Desktop, Tablet und Telefon.
 
 ~~~bash
 npm ci --ignore-scripts
-npx playwright install --with-deps chromium
+npx playwright install --with-deps chromium webkit
 npm run test:browser
+BROWSER_ENGINE=webkit npm run test:browser
 ~~~
 
-Der CI-Lauf bewahrt diese Bilder und den Prüfbericht als Artefakt
-`hannover-browser-qa` auf. Der [Prüfbericht vom 21.11.2026](docs/QA.md)
-enthält die erfolgreich geprüften Abläufe und Bildschirmbilder.
-
-Die Prüfungen laufen gegen lokale Daten und Testfälle. Sie prüfen unter anderem
-Suche, teilbare Ansichten, Datenzugriff und Importintegrität. Das alte
-pruefung.tsv und die Bildschirmbilder unter pruefung/ stammen vom
-ursprünglichen Ratsatlas-Portal und sind kein Prüfnachweis für diese Anwendung.
+Der CI-Lauf bewahrt diese Bilder und die getrennten Berichte
+`chromium/report.json` und `webkit/report.json` im Artefakt
+`hannover-browser-qa` auf, auch bei einem fehlgeschlagenen Test. Die Berichte
+enthalten die Ergebnisse und Bildnamen; der zugehörige CI-Lauf nennt den
+geprüften Commit. Dauerhaft festgehaltene Nachweise stehen unter
+[Prüfberichte](docs/QA.md).
 
 ## Veröffentlichung
 
-Vorgesehene Adresse:
+Projektadresse:
 [carstenartur.github.io/ratsatlas-Hannover/](https://carstenartur.github.io/ratsatlas-Hannover/).
-**Die Konfiguration allein bedeutet noch nicht, dass die Seite veröffentlicht ist.**
+Der veröffentlichte Stand ergibt sich aus dem letzten erfolgreichen
+[Pages-Lauf auf main](https://github.com/carstenartur/ratsatlas-Hannover/actions/workflows/veroeffentlichen.yml?query=branch%3Amain).
 
 Der Workflow [Prüfen und veröffentlichen](.github/workflows/veroeffentlichen.yml)
 prüft Pull Requests und Änderungen auf main. Nur ein erfolgreicher Push-Lauf
@@ -165,21 +175,20 @@ Zeitplan und keine Veröffentlichung in ein fremdes Repository.
 
 ## Herkunft, Rechte und Betrieb
 
-- Gestaltung, Schrift- und Iconbasis: **Damian Paderta**,
-  [daimpad/ratsatlas](https://github.com/daimpad/ratsatlas), mit Herkunft aus
-  [Ratsatlas Bonn](https://github.com/daimpad/ratsatlas-bonn). Die ursprüngliche
-  MIT-Lizenz bleibt erhalten.
-- Hannover-Datenbestand: **Unfallwerkbank**,
-  [carstenartur/Unfallatlas](https://github.com/carstenartur/Unfallatlas), mit den
-  im Quellpaket genannten amtlichen Quellen.
+- Anwendungskomponenten von **Damian Paderta** unter MIT aus Ratsatlas Bonn
+  sowie Schriftintegration und Icons aus dem ursprünglichen Ratsatlas-Fork.
+  [Bonner Quellstand und Dateizuordnung](docs/UPSTREAM.md)
+- Hannover-Datenbestand aus der **Unfallwerkbank** mit den im Quellpaket
+  genannten amtlichen Quellen.
+  [carstenartur/Unfallatlas](https://github.com/carstenartur/Unfallatlas)
 - Kartenbibliothek: **Leaflet 1.9.4**, lokal mit BSD-2-Clause-Lizenz.
 - Schrift: **Inter**, lokal mit SIL Open Font License 1.1.
 - Kartenhintergrund: **© OpenStreetMap-Mitwirkende**; Kartenkacheln werden von
   tile.openstreetmap.org abgerufen.
 
-Die **MIT-Lizenz des Codes ist keine pauschale Lizenz der Ratsdaten**. Das
-Quellpaket nennt für die Gesamtdaten rights.status: not-specified; seine
-einzelnen Rechte- und Quellenhinweise bleiben erhalten. Siehe [NOTICE.md](NOTICE.md).
+Die **MIT-Lizenz gilt für den Code**. Das Quellpaket führt die Gesamtdaten mit
+dem Rechte-Status `not-specified` und enthält die einzelnen Rechte- und
+Quellenhinweise. [Herkunft und Lizenzen](NOTICE.md)
 
 Die Instanz gehört zum eigenständigen GitHub-Projekt carstenartur/ratsatlas-Hannover.
 Eine Unterstützung dieser Instanz durch Damian Paderta oder Offene Kommunen.NRW

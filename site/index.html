@@ -1,42 +1,79 @@
 <!doctype html>
 <html lang="de">
 <head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; worker-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://tile.openstreetmap.org; object-src 'none'; base-uri 'self'; form-action 'none'">
-  <title>Ratsatlas Hannover</title>
-  <link rel="canonical" href="https://carstenartur.github.io/ratsatlas-Hannover/">
+  <title>Ratsatlas Hannover – Vorgänge auf Karte und Zeitleiste</title>
+  <meta name="description" content="Öffentliche Vorgänge der Stadt Hannover, der Region Hannover und des Niedersächsischen Landtags auf Karte, in der Liste und auf der Zeitleiste recherchieren.">
   <meta name="referrer" content="strict-origin-when-cross-origin">
-  <meta name="description" content="Öffentliche Vorgänge aus der Stadt Hannover, der Region und dem Niedersächsischen Landtag recherchieren und auf der Karte erkunden.">
-  <meta name="theme-color" content="#6d28d9"><link rel="icon" href="favicon.svg" type="image/svg+xml"><link rel="manifest" href="site.webmanifest">
-  <link rel="stylesheet" href="tokens.css"><link rel="stylesheet" href="vendor/leaflet/leaflet.css"><link rel="stylesheet" href="app.css">
+  <meta name="theme-color" content="#7c3aed">
+  <link rel="canonical" href="https://carstenartur.github.io/ratsatlas-Hannover/">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="manifest" href="site.webmanifest">
+  <link rel="preload" href="fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="tokens.css"><link rel="stylesheet" href="vendor/leaflet/leaflet.css"><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="hannover.css">
   <script src="vendor/leaflet/leaflet.js" defer></script><script type="module" src="app.js"></script>
 </head>
-<body data-pane="list">
-<a class="skip" href="#query">Zur Recherche springen</a>
-<header>
-  <a class="brand" href="./"><img src="favicon.svg" width="38" height="38" alt=""><h1>Ratsatlas <span>Hannover</span></h1></a>
-  <nav aria-label="Werkzeuge"><button id="status-open">Datenstand</button><button id="share" class="primary">Ansicht teilen</button></nav>
-</header>
-<main>
-  <div class="summary"><p id="stats" role="status">Ratsdaten werden geladen …</p><span id="stamp"></span></div>
-  <div class="pane-switch" aria-label="Ansicht auswählen"><button id="list-tab" aria-pressed="true">Liste</button><button id="map-tab" aria-pressed="false">Karte</button></div>
-  <div class="workspace">
-    <section class="sidebar" aria-labelledby="search-title"><div class="search-head">
-      <h2 id="search-title">Vorgänge suchen</h2>
-      <label class="sr" for="query">Suchbegriff, Drucksache oder Ort</label><input id="query" type="search" placeholder="Suchbegriff, Drucksache oder Ort">
-      <fieldset id="levels"><legend class="sr">Quellenebenen</legend>
-        <label><input type="checkbox" value="city" checked> Stadt</label><label><input type="checkbox" value="region" checked> Region</label><label><input type="checkbox" value="state" checked> Land</label>
-      </fieldset>
-      <details id="filters"><summary>Zeitraum und Ortsbezug</summary><div class="years"><label>Von Jahr<input id="from" type="number" min="1000" max="9999" placeholder="Jahr"></label><label>Bis Jahr<input id="to" type="number" min="1000" max="9999" placeholder="Jahr"></label></div><label class="check"><input type="checkbox" id="mapped"> Nur verortete Vorgänge</label></details>
-    </div><div class="list-meta"><strong id="hits" role="status">Suche wird geladen …</strong><button class="text-button" id="reset" hidden>Zurücksetzen</button></div>
-    <div id="list" aria-label="Suchergebnisse"></div><div class="pagination" hidden><button id="prev">Zurück</button><span id="page"></span><button id="next">Weiter</button></div>
+<body class="list-closed detail-open">
+  <!-- Map, navigation and sheet structure derived from Ratsatlas Bonn
+       f8850008e81825ae79be49ca7f3441b928a1858b (MIT); see docs/UPSTREAM.md. -->
+  <a class="skip-link" href="#q">Zur Suche springen</a>
+  <svg class="icon-defs" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></symbol>
+    <symbol id="i-list" viewBox="0 0 24 24"><path d="M9 6h12M9 12h12M9 18h12M3 6h1M3 12h1M3 18h1"/></symbol>
+    <symbol id="i-timeline" viewBox="0 0 24 24"><path d="M3 18h18M5 18v-5M10 18V7M15 18v-8M20 18V4"/></symbol>
+    <symbol id="i-doc" viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6zM14 3v5h4M9 12h6M9 16h6"/></symbol>
+    <symbol id="i-map" viewBox="0 0 24 24"><path d="m3 5 6-2 6 2 6-2v16l-6 2-6-2-6 2zM9 3v16M15 5v16"/></symbol>
+    <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
+    <symbol id="i-share" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m9 10 6-4M9 14l6 4"/></symbol>
+    <symbol id="i-source" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 10v7M12 6v1"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+  </svg>
+  <h1 class="site-title"><a href="./" data-home><img src="favicon.svg" width="27" height="27" alt="">Ratsatlas <span class="ort">Hannover</span></a></h1>
+  <nav class="nav glass" aria-label="Recherche und Ansichten">
+    <a class="brand" href="./" data-home aria-label="Ratsatlas Hannover – Einstieg"><img src="favicon.svg" width="34" height="34" alt=""><span>Ratsatlas <span class="ort">Hannover</span></span></a>
+    <form class="nav-search" id="nav-search" role="search"><label for="q" class="visually-hidden">Drucksache, Straße, Hausnummer oder Suchbegriffe</label><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg><input type="search" id="q" placeholder="Drucksache, Straße, Hausnummer …" autocomplete="off" aria-controls="papers"></form>
+    <button type="button" class="nav-burger" id="nav-burger" aria-expanded="false" aria-controls="nav-more"><svg class="icon" aria-hidden="true"><use href="#i-menu"/></svg><span>Menü</span></button>
+    <div class="nav-more" id="nav-more">
+      <div class="nav-group seg" role="group" aria-label="Ansichten ein- und ausklappen">
+        <button type="button" class="toggle" data-panel="panel-list" aria-controls="panel-list" aria-pressed="false" title="Liste"><svg class="icon" aria-hidden="true"><use href="#i-list"/></svg><span>Liste</span></button>
+        <button type="button" class="toggle" data-panel="timeline-wrap" aria-controls="timeline-wrap" aria-pressed="false" title="Zeitleiste"><svg class="icon" aria-hidden="true"><use href="#i-timeline"/></svg><span>Zeitleiste</span></button>
+        <button type="button" class="toggle" data-panel="panel-detail" aria-controls="panel-detail" aria-pressed="true" title="Vorgang"><svg class="icon" aria-hidden="true"><use href="#i-doc"/></svg><span>Vorgang</span></button>
+        <button type="button" class="toggle" id="map-view" aria-pressed="false" title="Freie Kartenansicht"><svg class="icon" aria-hidden="true"><use href="#i-map"/></svg><span>Karte</span></button>
+      </div>
+      <div class="nav-group">
+        <button type="button" class="menu-btn" id="status-open" data-dialog="status" title="Datenstand und Quellen"><svg class="icon" aria-hidden="true"><use href="#i-source"/></svg><span>Quellen</span></button>
+        <button type="button" class="menu-btn" id="share" data-dialog="share-dialog" title="Ansicht teilen"><svg class="icon" aria-hidden="true"><use href="#i-share"/></svg><span>Teilen</span></button>
+      </div>
+    </div>
+  </nav>
+  <main>
+    <div id="map" role="region" aria-label="Karte der verorteten Vorgänge. Alle Vorgänge, auch ohne Kartenort, sind über die Liste zugänglich."></div>
+    <section id="panel-list" class="panel glass" aria-labelledby="list-heading" hidden>
+      <div class="resizer" data-resize="list" role="separator" tabindex="0" aria-label="Breite der Liste" aria-orientation="vertical"></div>
+      <div class="panel-head"><h2 id="list-heading" tabindex="-1">Vorgänge</h2><button type="button" class="icon-btn" data-close="panel-list" aria-label="Liste einklappen">‹</button></div>
+      <div class="panel-body">
+        <form class="filters" id="filters" aria-label="Vorgänge filtern">
+          <fieldset class="source-levels" id="levels"><legend>Quellen</legend><label class="check"><input type="checkbox" value="city" checked><span class="source-dot city"></span>Stadt</label><label class="check"><input type="checkbox" value="region" checked><span class="source-dot region"></span>Region</label><label class="check"><input type="checkbox" value="state" checked><span class="source-dot state"></span>Land</label></fieldset>
+          <details class="acc" id="more-filters"><summary>Zeitraum und Ortsbezug<span id="active-filters"></span></summary><div class="filters"><div class="filter-row"><label>Von Datum<input id="from" type="date" min="1000-01-01" max="9999-12-31"></label><label>Bis Datum<input id="to" type="date" min="1000-01-01" max="9999-12-31"></label></div><label class="check"><input type="checkbox" id="mapped">Nur verortete Vorgänge</label><button type="button" class="link-btn" id="reset-dates" hidden>Zeitraum aufheben</button></div></details>
+        </form>
+        <div class="list-summary"><p class="count" id="count" role="status" aria-live="polite">Daten werden geladen …</p><button type="button" class="link-btn" id="reset" hidden>Zurücksetzen</button></div>
+        <ol class="papers" id="papers" tabindex="-1" aria-label="Suchergebnisse"></ol>
+        <nav class="pagination" aria-label="Weitere Ergebnisse" hidden><button type="button" class="btn btn-secondary" id="prev">Zurück</button><span id="page"></span><button type="button" class="btn btn-secondary" id="next">Weiter</button></nav>
+      </div>
     </section>
-    <section class="map-card" aria-labelledby="map-title"><div class="map-heading"><h2 id="map-title">Karte</h2><span id="map-count" role="status">Orte werden geladen …</span></div><div id="map" aria-label="Karte der verorteten Vorgänge"></div></section>
-  </div>
-</main>
-<footer><span>Ein Projekt auf Basis von <a href="https://ratsatlas.de/">Ratsatlas</a> von Damian Paderta</span><div><a href="https://carstenartur.github.io/Unfallatlas/">Zur Unfallwerkbank</a><a href="datenschutz.html">Datenschutz</a></div></footer>
-<dialog id="detail" aria-labelledby="detail-title"><div class="dialog-bar"><strong>Vorgangsdetails</strong><button class="close" id="detail-close" aria-label="Vorgangsdetails schließen">Schließen ×</button></div><article id="detail-body"></article></dialog>
-<dialog id="status" aria-labelledby="status-title"><div class="dialog-bar"><h2 id="status-title">Datenstand und Quellen</h2><button class="close" id="status-close" aria-label="Datenstand schließen">Schließen ×</button></div><div id="status-body">Daten werden geladen …</div></dialog>
-<dialog id="share-dialog" aria-labelledby="share-title"><div class="dialog-bar"><h2 id="share-title">Ansicht teilen</h2><button id="share-close">Schließen ×</button></div><div class="share-inner"><label for="share-url">Link zur aktuellen Ansicht</label><input id="share-url" readonly><button id="copy" class="primary">Link kopieren</button><p id="copy-status" role="status"></p></div></dialog>
-<noscript>Für die Recherche im Ratsatlas bitte JavaScript aktivieren.</noscript>
-</body></html>
+    <section id="timeline-wrap" class="glass" aria-label="Zeitleiste" hidden></section>
+    <section id="panel-detail" class="panel glass" aria-labelledby="detail-heading">
+      <div class="resizer" data-resize="detail" role="separator" tabindex="0" aria-label="Breite des Vorgangs" aria-orientation="vertical"></div>
+      <div class="panel-head"><h2 id="detail-heading" tabindex="-1">Los geht’s</h2><button type="button" class="icon-btn" id="detail-close" data-close="panel-detail" aria-label="Vorgang einklappen">›</button></div>
+      <article class="panel-body detail" id="detail"><p>Der Ratsatlas wird geladen …</p></article>
+    </section>
+  </main>
+  <div class="map-info glass" aria-label="Kartenstatus"><span id="map-count" role="status">Orte werden geladen …</span><button type="button" class="link-btn" data-open-status>Datenstand</button></div>
+  <footer class="source-footer"><a href="https://bonn.ratsatlas.de/" target="_blank" rel="noopener">Auf Basis von Ratsatlas Bonn</a><span> · </span><a href="datenschutz.html">Datenschutz</a></footer>
+  <div class="visually-hidden" id="announce" role="status" aria-live="polite"></div>
+  <dialog id="status" class="info-dialog glass" aria-labelledby="status-title"><div class="dialog-head"><h2 id="status-title">Datenstand und Quellen</h2><button type="button" class="icon-btn" id="status-close" aria-label="Datenstand schließen"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button></div><div id="status-body"><p>Daten werden geladen …</p></div></dialog>
+  <dialog id="share-dialog" class="info-dialog glass" aria-labelledby="share-title"><div class="dialog-head"><h2 id="share-title">Ansicht teilen</h2><button type="button" class="icon-btn" id="share-close" aria-label="Teilen schließen"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button></div><div class="share-inner"><p>Der Link enthält die Suche, Quellen, Zeitgrenzen, Kartenposition, offenen Fenster und den ausgewählten Vorgang.</p><label for="share-url">Link zur aktuellen Ansicht</label><input id="share-url" readonly><button type="button" id="copy" class="btn btn-primary">Link kopieren</button><p id="copy-status" role="status"></p></div></dialog>
+  <noscript><div class="noscript glass">Für die Recherche im Ratsatlas bitte JavaScript aktivieren.</div></noscript>
+</body>
+</html>

@@ -49,3 +49,41 @@ test('query syntax is plain text and is never evaluated as a regular expression'
   assert.doesNotThrow(() => index.search({ query: '[.*+' }));
   assert.equal(index.search({ query: 'radwege im umland' }).total, 1);
 });
+
+test('ISO day bounds are inclusive, override the corresponding year bound and retain undated records after reset', () => {
+  const index = new SearchIndex(rows);
+  assert.deepEqual(index.search({ dateFrom: '2026-05-12', dateTo: '2026-05-18', yearFrom: '2027', yearTo: '2025' }).items.map(r => r.id),
+    ['hannover-sim:1047-2026F1', 'hannover-sim:1047-2026']);
+  assert.equal(index.search({ dateTo: '2026-05-12' }).total, 3);
+  assert.equal(index.search({ dateFrom: '2026-05-19', dateTo: '2026-05-12' }).total, 0);
+  assert.equal(index.search({ dateFrom: '', dateTo: '', yearFrom: '', yearTo: '' }).total, 5);
+});
+
+test('timeline counts cover every matching source before date filtering and pagination', () => {
+  const result = new SearchIndex(rows).search({ dateFrom: '2026-05-18', limit: 1 });
+  assert.equal(result.total, 1);
+  assert.ok(result.timeline, 'search must provide the complete timeline projection');
+  const histogram = result.timeline;
+  assert.deepEqual(histogram.daily, [['2024-03-01', 1], ['2026-04-01', 1], ['2026-05-12', 1], ['2026-05-18', 1]]);
+  assert.equal(histogram.undatedCount, 1);
+  assert.equal(histogram.dataStart, '2024-03-01');
+  assert.equal(histogram.dataEnd, '2026-05-18');
+  assert.equal(histogram.months.length, 27);
+  assert.equal(histogram.density.vorlage.Stadt.at(-1), 2);
+  assert.equal(histogram.density.vorlage.Region.at(-2), 1);
+  assert.equal(histogram.density.vorlage.Land[0], 1);
+});
+
+test('timeline respects non-date filters and distinguishes no dated matches from missing records', () => {
+  const index = new SearchIndex(rows);
+  const mapped = index.search({ query: 'Rad', levels: ['city'], mappedOnly: true, yearTo: '2020' });
+  assert.equal(mapped.total, 0);
+  assert.ok(mapped.timeline, 'date filters must not erase the histogram');
+  assert.deepEqual(mapped.timeline.daily, [['2026-05-12', 1]]);
+  assert.equal(mapped.timeline.undatedCount, 0);
+  const undated = index.search({ query: 'Öffentliche Sitzung' });
+  assert.equal(undated.total, 1);
+  assert.deepEqual(undated.timeline.daily, []);
+  assert.equal(undated.timeline.undatedCount, 1);
+  assert.deepEqual(index.search({ levels: [] }).timeline.daily, []);
+});

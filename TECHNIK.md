@@ -1,6 +1,7 @@
 # Ratsatlas Hannover – Technik
 
-[Zur Übersicht](README.md) · [Datenherkunft](docs/DATEN.md) · [Lizenzen](NOTICE.md)
+[Zur Übersicht](README.md) · [Datenherkunft](docs/DATEN.md) ·
+[Bonner Quellstand](docs/UPSTREAM.md) · [Lizenzen](NOTICE.md)
 
 Die Anwendung liefert statische Dateien aus site/ aus. Ein Python-Importer
 übernimmt das veröffentlichte Hannover-RIS-Paket der Unfallwerkbank. Suche,
@@ -11,18 +12,22 @@ keinen Anwendungsserver, keine Datenbank im Betrieb und keinen API-Schlüssel.
 
 | Pfad | Aufgabe |
 |---|---|
-| site/index.html, site/app.js, site/app.css | Rechercheoberfläche, Karte und Detaildialoge |
-| site/view-state.js | Validierung und Serialisierung des Ansichtszustands in URLs |
-| site/data.js | Geprüfter Datenzugriff, Baumabfragen und Detailnachladung |
-| site/search.js, site/search-worker.js | Suche und kombinierte Filter über den vollständigen Suchindex |
-| site/tokens.css, site/fonts/ | Übernommene Ratsatlas-Gestaltung und lokale Schrift Inter |
-| site/vendor/leaflet/ | Leaflet 1.9.4 samt Bildern und Lizenz, lokal ausgeliefert |
-| data/hannover-snapshot.tar.gz.part*, data/hannover-snapshot.parts.json, data/hannover-snapshot.sha256 | Versioniertes vollständiges Archiv in vier überprüfbaren Teilen |
-| site/data/ris/ | Entpacktes Quellpaket, abgeleitete Such- und Kartendateien, Importnachweis |
-| scripts/snapshot_bundle.py | Archiv packen und für lokale Nutzung oder Deployment entpacken |
-| scripts/import_unfallwerkbank.py | Wiederholbare Übernahme und Offlineprüfung, Python-Standardbibliothek |
-| tests/ | JavaScript- und Python-Tests |
-| .github/workflows/veroeffentlichen.yml | Ein gemeinsamer Prüf- und Pages-Workflow |
+| `site/index.html`, `site/style.css` | Von Bonn übernommene Karten- und Fensterstruktur und Bonner Stylesheet |
+| `site/bonn-panels.js` | Fenster, Fokus, Breiten und mobile Navigation, aus der Bonner Anwendung abgeleitet |
+| `site/app.js`, `site/hannover.css` | Hannover-Anbindung für Suche, Karte, Vorgangsdetails und Quellenstatus sowie Ergänzungen zur Darstellung |
+| `site/timeline.js`, `site/timeline-adapter.js` | Bonner Zeitleistenmodul mit Hannover-Anbindung für Datumsverteilungen und Beratungsereignisse |
+| `site/view-state.js` | Validierung und Serialisierung des Ansichtszustands in URLs |
+| `site/data.js` | Geprüfter Datenzugriff, Baumabfragen und Detailnachladung |
+| `site/search.js`, `site/search-worker.js` | Suche, kombinierte Filter und Datumsverteilungen über den vollständigen Suchindex |
+| `site/tokens.css`, `site/fonts/` | Gestaltungsbasis des ursprünglichen Forks und lokale Schrift Inter |
+| `site/portal.css` | Früheres Portal-Stylesheet für Datenschutz und 404-Seite |
+| `site/vendor/leaflet/` | Leaflet 1.9.4 samt Bildern und Lizenz, lokal ausgeliefert |
+| `data/hannover-snapshot.tar.gz.part*`, `data/hannover-snapshot.parts.json`, `data/hannover-snapshot.sha256` | Versioniertes vollständiges Archiv in vier überprüfbaren Teilen |
+| `site/data/ris/` | Entpacktes Quellpaket, abgeleitete Such- und Kartendateien, Importnachweis |
+| `scripts/snapshot_bundle.py` | Archiv packen und für lokale Nutzung oder Deployment entpacken |
+| `scripts/import_unfallwerkbank.py` | Wiederholbare Übernahme und Offlineprüfung, Python-Standardbibliothek |
+| `tests/`, `scripts/browser_smoke.mjs` | JavaScript- und Python-Tests und Browserprüfung |
+| `.github/workflows/veroeffentlichen.yml` | Gemeinsamer Prüf- und Pages-Workflow |
 
 Die früheren Portaldateien staedte.json, scripts/kacheln.py, scripts/sitemap.py,
 scripts/indexnow.py und deploy/ sind historische Bestandteile des Forks. Sie
@@ -115,25 +120,48 @@ prüft die Originalstruktur und vergleicht die reproduzierten Such- und
 Kartenprojektionen mit den ausgelieferten Dateien. Der Importzeitpunkt wird
 dabei nicht als neuer Quellenprüfstand ausgegeben.
 
-## Browser, Suche und URLs
+## Suche, Zeitleiste und Details
 
-AtlasData in site/data.js bietet die Methoden init(), search(params),
-getRecord(id) und getMap(). Der Suchworker filtert den vollständigen Index
-nach Suchbegriff, Quellenebenen, Jahresgrenzen und Ortsbezug. Die Oberfläche
-zeigt paginierte Ergebnisse; die Paginierung begrenzt den angezeigten Ausschnitt,
-nicht den durchsuchten Datenbestand.
+`AtlasData` in `site/data.js` bietet `init()`, `search(params)`,
+`getRecord(id)` und `getMap()`. Der Suchworker durchsucht den vollständigen
+Index nach Suchbegriffen, Quellenebenen und Verortung. Aus diesen Treffern
+berechnet er Tageszählungen, Monatszählungen nach Quellenebene und die Zahl
+der undatierten Treffer. Anschließend wendet er die Datums- oder Jahresgrenzen
+an. Diese Grenzen wirken auf Liste und Karte. Die Liste zeigt eine Seite der
+zugehörigen Treffer.
 
-Details werden nach Bedarf aus den unveränderten Bäumen gelesen. Vor der
+Der Adapter übergibt die Zählungen an das Bonner Zeitleistenmodul.
+**gesamter Bestand** hebt den Datumsfilter auf und schließt damit die zu Suche,
+Quellen und Verortungsfilter passenden undatierten Vorgänge wieder ein. Die
+Auswahlspur kann das Datum und überlieferte Beratungsereignisse des geöffneten
+Vorgangs anzeigen. Der globale Quellenprüfstand und das jüngste Datum der
+Vorgänge werden getrennt geführt. Der Hannover-Index enthält Vorgangsdaten
+und die Ereignisse liegen in den Detailpartitionen. Die Zeitleiste verwendet
+daher eine Vorgangsachse und die belegte Auswahlspur.
+
+Die Anwendung liest Details bei Bedarf aus den unveränderten Bäumen. Vor der
 Verwendung werden gzip-komprimierte Inhalte entpackt und ihre SHA-256-Prüfsummen
-kontrolliert. Quelle, Ortsbelege, vorhandene Ereignisse und Beziehungen werden
-aus den überlieferten Daten angezeigt. Fehlende Angaben werden nicht aus der
-Darstellung eines Kartensymbols oder aus einer politischen Ebene erschlossen.
+kontrolliert. Die Vorgangsansicht zeigt Originalverweise, Ortsbelege,
+überlieferte Ereignisse und dokumentierte Beziehungen. Interne Links verwenden
+quellenqualifizierte IDs. Die Karte zeichnet die vorhandenen Originalgeometrien.
 
-Die Ansicht verwendet Queryparameter, unter anderem q, ebenen, von, bis,
-verortet, vorgang, lat, lng, z, ansicht und seite. Dadurch funktionieren geteilte
-Links unter einem GitHub-Pages-Unterpfad ohne serverseitiges Routing. Suchbegriffe
-und gewählte Vorgänge sind Bestandteil der geteilten Adresse und beim Aufruf
-auch der Anfrage an den Hostinganbieter.
+## Ansichtszustand und URLs
+
+| Parameter | Inhalt |
+|---|---|
+| `q`, `ebenen`, `verortet`, `seite` | Suchtext, Quellenebenen, Verortung und Ergebnisseite |
+| `von`, `bis` | Datumsgrenzen im Format `JJJJ-MM-TT` oder vierstellige Jahre aus bestehenden Links |
+| `vorgang` | Quellenqualifizierte ID des ausgewählten Vorgangs |
+| `lat`, `lng`, `z` | Kartenmittelpunkt und Zoom |
+| `fenster` | Offene Fenster (`list`, `detail`, `timeline`). `fenster=` öffnet die freie Karte. |
+| `zeitzoom`, `zeitmitte` | Zoomstufe und Mittelpunkt der Zeitleiste |
+| `ansicht` | Karten- oder Listenansicht in bestehenden Links |
+
+Der Zustand lässt sich unter dem GitHub-Pages-Unterpfad aus der URL herstellen.
+Die Zurück- und Vorwärtsnavigation stellt frühere Zustände wieder her. Der
+Fenstercontroller begrenzt die Zahl gleichzeitig offener Fenster bei schmalen
+Ansichten. Beim Aufruf einer geteilten Adresse erreichen deren Queryparameter
+auch den Hostinganbieter.
 
 Benötigt werden ein aktueller Browser mit ES-Modulen, Web Workers,
 DecompressionStream, Web Crypto und Dialogunterstützung sowie JavaScript.
@@ -146,20 +174,20 @@ python3 -m http.server --directory site 8000
 
 ## Darstellung und Datenflüsse
 
-Die gemeinsamen Farben, Abstände, lokale Inter-Schrift und Fokusrahmen kommen
-aus dem Ratsatlas-Kern. Die Rechercheoberfläche nutzt app.css; Datenschutz und
-404-Seite verwenden die vorhandenen Textseitenklassen aus style.css.
+Die Hauptseite verwendet das Bonner Stylesheet `style.css` mit Ergänzungen in
+`hannover.css`. Die vorhandene Schrift- und Iconbasis bleibt lokal. Datenschutz
+und 404-Seite beziehen ihre Textseitenklassen aus `portal.css`.
 
 Leaflet 1.9.4 liegt lokal. Die Hintergrundkarte lädt Rasterkacheln von
 https://tile.openstreetmap.org/. Das ist eine externe Verbindung: IP-Adresse,
 Kacheladresse und übliche HTTP-Anfragedaten erreichen den Kartenanbieter.
 Die Anwendung übermittelt dorthin keine Suchtexte oder Dokumentinhalte.
 
-Die Anwendung setzt keine Analysewerkzeuge, Werbetracker oder Cookies ein und
-schreibt nicht in localStorage oder sessionStorage. Der Browser kann
-geladene Dateien regulär zwischenspeichern und Rechercheadressen im Verlauf
-behalten. „Link kopieren“ nutzt nach Betätigung die Zwischenablage. Weitere
-Angaben stehen in [Datenschutz](site/datenschutz.html).
+Die Fenstersteuerung speichert bei Größenänderungen die Breiten der Liste und
+des Vorgangsfensters in `localStorage`. Rechercheparameter und Vorgangsauswahl
+stehen in der URL. Der Browser kann geladene Dateien regulär zwischenspeichern
+und Rechercheadressen im Verlauf behalten. **Link kopieren** nutzt nach
+Betätigung die Zwischenablage. [Datenschutz](site/datenschutz.html)
 
 Die CSP der Hauptseite erlaubt die lokalen Module und Worker sowie
 OpenStreetMap-Kachelbilder. Leaflet benötigt dynamische Stile; die Hauptseite
@@ -180,14 +208,14 @@ Der einzige aktive Workflow heißt **Prüfen und veröffentlichen**:
 
 | Ereignis | Ergebnis |
 |---|---|
-| Pull Request nach main | Archiv entpacken, JavaScript-Tests, Python-Tests und vollständige Offlineprüfung des Datenpakets |
-| Push auf main | Dieselben Prüfungen; danach Archiv im Deploymentjob entpacken, site/ hochladen und an GitHub Pages ausliefern |
+| Pull Request nach `main` | Archiv entpacken, JavaScript- und Python-Tests, vollständige Offlineprüfung und Browserprüfungen in Chromium und WebKit |
+| Push auf `main` | Dieselben Prüfungen. Der Deploymentjob entpackt anschließend das Archiv und liefert `site/` mit MIT-Lizenz und Herkunftshinweisen an GitHub Pages aus. |
 
-Die Prüfmaschine verwendet Node.js 24 und Python 3.12. Für die
-JavaScript-Funktionstests werden keine Projektabhängigkeiten installiert. Alle
-verwendeten Actions sind auf Commit-Hashes festgelegt. Schreibrechte für Pages
-und das OIDC-Token erhält nur der Deploymentjob. Es gibt keinen Plesk-Branch,
-keine IndexNow-Anfrage und keine Live-Prüfung des fremden Hauptportals.
+Die Prüfmaschine verwendet Node.js 24 und Python 3.12. Die Browserprüfung
+verwendet Playwright und speichert die Berichte und Bildschirmbilder im
+Workflow-Artefakt `hannover-browser-qa`. Alle verwendeten Actions sind auf
+Commit-Hashes festgelegt. Schreibrechte für Pages und das OIDC-Token erhält nur
+der Deploymentjob.
 
 GitHub Pages muss im Repository auf **GitHub Actions** als Veröffentlichungsquelle
 gestellt sein. Ein vorbereiteter Workflow oder ein erfolgreicher PR-Test
@@ -208,7 +236,6 @@ Inhalte noch eine manuelle Bewertung jeder Verortung. Die Angaben
 sourceVerifiedAt, builtAt und importedAt haben unterschiedliche Bedeutungen;
 die [Datenbeschreibung](docs/DATEN.md) hält sie auseinander.
 
-Das historische Portal-Prüfprotokoll pruefung.tsv und die früheren
-Bildschirmbilder in pruefung/ belegen ausschließlich den damaligen
-Portalstand. Aussagen zur Barrierefreiheit dieser neuen Anwendung benötigen
-eigene Prüfungen; der Fork übernimmt keine frühere WCAG-Abnahme.
+Das Portal-Prüfprotokoll `pruefung.tsv` und die Bildschirmbilder in `pruefung/`
+dokumentieren den historischen Stand des Portals. Die Prüfberichte zur
+Hannover-Anwendung führen ihre jeweiligen Stände auf. [Prüfberichte](docs/QA.md)

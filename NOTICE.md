@@ -1,20 +1,25 @@
 # Herkunft und Lizenzen
 
-## Ratsatlas-Kern
+## Ratsatlas-Kern und Bonner Anwendung
 
 Dieses Repository begann als Fork von
 [daimpad/ratsatlas](https://github.com/daimpad/ratsatlas) am Stand
 3b175bb7cb13e8830eb66bf1b64b96153fe16340.
 
-Der ursprüngliche Code und die Gestaltung stammen von **Damian Paderta**,
-Copyright © 2026. Die unveränderte [MIT-Lizenz](LICENSE) bleibt Teil dieser
-Weiterentwicklung. Übernommen sind insbesondere Gestaltungsgrößen,
-Textseitenlayout, Schriftintegration und die vorhandenen Ratsatlas-Symbole.
+Aus diesem Stand stammen die Gestaltungsgrundlagen, das Textseitenlayout, die
+Schriftintegration und die vorhandenen Ratsatlas-Symbole. Die Anwendung bindet
+zusätzlich Komponenten aus Ratsatlas Bonn von **Damian Paderta** ein. Grundlage
+ist der Commit `f8850008e81825ae79be49ca7f3441b928a1858b`.
+[Bonner Quellstand](https://github.com/daimpad/ratsatlas-bonn/tree/f8850008e81825ae79be49ca7f3441b928a1858b)
 
-Der Kern verweist seinerseits auf die Gestaltung des
-[Ratsatlas Bonn](https://github.com/daimpad/ratsatlas-bonn), früher
-daimpad/allris-test. Hannover ergänzt eine eigene Anwendung und einen eigenen
-Import; die Bonner Datenpipeline und ihr Datenbestand wurden nicht übernommen.
+Der ursprüngliche Code und die Gestaltung tragen **Copyright © 2026 Damian
+Paderta**. Der Lizenztext im Bonner Quellstand und der Lizenztext dieses Forks
+sind bytegleich. Übernommen wurden das Bonner Stylesheet und das angepasste
+Zeitleistenmodul. Die Kartenstruktur in `site/index.html`, die Steuerung in
+`site/bonn-panels.js` und die Darstellung von Liste, Details und Verfahrensschritten
+in `site/app.js` sind aus Bonn abgeleitet. Hannover ergänzt die Anbindung an
+die Unfallwerkbank-Daten, Suche, Filter, Quellennachweise und Recherche-URLs.
+[MIT-Lizenz](LICENSE) · [Dateizuordnung und Pflege](docs/UPSTREAM.md)
 
 Die Herkunftsnennung bezeichnet keine Trägerschaft oder Unterstützung dieser
 Hannover-Instanz durch Damian Paderta oder Offene Kommunen.NRW. Historische
@@ -36,8 +41,8 @@ in der Quelle als not-specified mit license: null gekennzeichnet. Der
 Quellhinweis zu Landtagsdokumenten wird als überlieferte Angabe erhalten; er
 ist keine eigene pauschale Rechtefreigabe durch dieses Projekt.
 
-Die MIT-Lizenz des Codes wird nicht auf die Daten übertragen. Weitere
-Informationen zu Quelle, Zeitständen und Grenzen: [docs/DATEN.md](docs/DATEN.md).
+Für die Hannover-Daten gelten die überlieferten Hinweise im Quellpaket.
+[Datenherkunft, Zeitstände und Grenzen](docs/DATEN.md)
 
 ## Leaflet 1.9.4
 

@@ -1,0 +1,58 @@
+{
+  "engine": "chromium",
+  "basePath": "/ratsatlas-Hannover/",
+  "assertions": [
+    "Bonn fullviewport map/nav/panel layout; all 109605 records and 3395 source geometries",
+    "Browser Back and Forward restore distinct linked request/answer selections",
+    "Rapid query/filter changes and clickable request/answer relationship preserve qualified identity",
+    "Street evidence, clickable original point under highlight, filtered popup removal and shared selection",
+    "Original LineString remains visible and clickable under selection: hannover-sim:15-0071-2025",
+    "Original Polygon remains visible and clickable under selection: hannover-sim:15-1035-2016",
+    "Previously published map/record and query-only links restore the selected answer or results",
+    "A slow record response preserves focus after the user returns to search",
+    "Same number 0098/2004 opens distinct Stadt and Region records without collisions",
+    "All 15 unlocated Landtag records retain their original identity and shared source filter",
+    "Real Bonn timeline filters and shares ISO dates; reset restores all 16 undated records",
+    "Phone list, unobstructed map and timeline are explicitly selected, painted and captured as distinct views",
+    "Tablet/phone have one collapsible sheet, accessible full map and honest source totals"
+  ],
+  "screenshots": [
+    "desktop.png",
+    "request-answer.png",
+    "location-evidence.png",
+    "geometry-line.png",
+    "geometry-polygon.png",
+    "timeline.png",
+    "tablet.png",
+    "mobile-list.png",
+    "mobile-map.png",
+    "mobile-timeline.png",
+    "sources.png"
+  ],
+  "pageErrors": [],
+  "consoleErrors": [],
+  "requestFailures": [],
+  "assetErrors": [],
+  "interactions": [
+    {
+      "name": "timeline-loading",
+      "passed": true
+    },
+    {
+      "name": "late-detail-focus",
+      "passed": true
+    },
+    {
+      "name": "immediate-preset-share",
+      "passed": true
+    },
+    {
+      "name": "mobile-timeline-reset",
+      "passed": true
+    },
+    {
+      "name": "resized-timeline",
+      "passed": true
+    }
+  ]
+}
