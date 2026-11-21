@@ -138,6 +138,7 @@ try {
     await page.goto(url+'?fenster=detail&vorgang='+encodeURIComponent(id)); await hits(109605);
     await page.locator('#detail-title').waitFor();
     await page.waitForFunction(()=>document.querySelector('#map-count')?.textContent.includes('3.395'));
+    await page.locator('#detail summary').filter({hasText:'Geometrien und Herkunft'}).click();
     assert.match(await page.locator('#detail').innerText(),new RegExp(type));
     await page.getByRole('button',{name:'Auf Karte zeigen',exact:true}).click();
     await page.waitForFunction(()=>Number(new URL(location.href).searchParams.get('z'))>=14);
