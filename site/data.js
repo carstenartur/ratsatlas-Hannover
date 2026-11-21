@@ -1,4 +1,4 @@
-import { SearchIndex } from './search.js?v=kartenorte-20261121-3';
+import { SearchIndex } from './search.js?v=kartenorte-20261121-4';
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder('utf-8', { fatal: true });
@@ -163,7 +163,7 @@ export class AtlasData {
     await this.init();
     if (this.useWorker) {
       if (!this.worker) {
-        this.worker = new Worker(new URL('./search-worker.js?v=kartenorte-20261121-3', import.meta.url), { type: 'module' });
+        this.worker = new Worker(new URL('./search-worker.js?v=kartenorte-20261121-4', import.meta.url), { type: 'module' });
         this.worker.onmessage = ({ data }) => {
           const request = this.pending.get(data.id);
           if (!request) return;

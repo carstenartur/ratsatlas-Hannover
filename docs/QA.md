@@ -1,5 +1,92 @@
 # Prüfung der Hannover-Anwendung
 
+## Kartenorte, Gebietsnavigation und Auswahl — 21. November 2026
+
+Diese Nachprüfung ersetzt die frühere Freigabe für die drei gemeldeten
+Probleme: fehlende Bonner Gebietsnavigation, unzureichende Verortung und
+fehlender Kartenfokus bei der Vorgangsauswahl. Die frühere Prüfung weiter
+unten bleibt als historischer Nachweis erhalten.
+
+### Daten und Verhalten
+
+| Merkmal | Vorher | Korrigierter Stand |
+|---|---:|---:|
+| Vorgänge insgesamt | 109.605 | 109.605 |
+| Vorgänge mit Kartenort | 8.004 | 9.502 |
+| Vorgänge ohne Kartenort | 101.601 | 100.103 |
+| Geometrien | 3.395 | 3.928 |
+| Bestätigte Bumke-Vorgänge mit Kartenort | 0 | 19 |
+
+Die 1.498 zusätzlichen Verortungen stammen aus amtlichen Straßenachsen
+(1.280), exakten Titeladressen (169), belegten Projektadressen (18),
+belegten Endadressen von Hausnummernbereichen (12) und dem amtlichen
+Bumke-Projektpunkt (19). Die ursprünglichen 6.905 komprimierten Quelldateien
+und das rekonstruierbare Originalarchiv bleiben unverändert.
+
+Die Startkarte zeigt die 13 amtlichen Stadtbezirke auf grauer Grundkarte;
+darunter stehen 51 Stadtteile und die einzelnen Kartenorte zur Verfügung.
+Gebietsfilter gelten für Karte, Liste, Zeitleiste und geteilte URLs. Die
+Auswahl eines Vorgangs in der Liste oder in den verwandten Vorgängen
+fokussiert seine Geometrien und hebt sie orange mit dunkler Kontur hervor.
+Punkte, Linien und Flächen bleiben unter der Hervorhebung anklickbar;
+zusammenfallende Geometrien behalten alle zugehörigen Vorgänge im Popup.
+
+### Automatisierte und unabhängige Prüfung
+
+Der [erfolgreiche Lauf 44892100046](https://github.com/carstenartur/ratsatlas-Hannover/actions/runs/44892100046)
+für [`c0cdc78062ee0e54627b3102864e3f25cccf60f8`](https://github.com/carstenartur/ratsatlas-Hannover/commit/c0cdc78062ee0e54627b3102864e3f25cccf60f8)
+belegt 43 bestandene JavaScript-Tests, 37 bestandene Python-Tests, die
+vollständige Offline-Integritätsprüfung und jeweils 21 Browserprüfpunkte
+sowie fünf Interaktionsfälle in Chromium und WebKit. Beide Engines
+erzeugten je 14 Bildschirmbilder für Desktop, Tablet und Telefon.
+
+[Chromium-Bericht dieses Laufs](qa/2026-11-21-kartenorte/chromium/report.json) ·
+[WebKit-Bericht dieses Laufs](qa/2026-11-21-kartenorte/webkit/report.json)
+
+Die Prüfung umfasst automatische Kameraführung, sichtbare Hervorhebung,
+ursprüngliche Punkt-/Linien-/Flächenklicks, Stadtbezirk-/Stadtteilwechsel,
+Rückkehr zur Übersicht, Browserhistorie, gespeicherte Kartenansicht,
+Bumke-Belege und einheitlich versionierte Laufzeitdateien. Die unabhängige
+Codeprüfung kontrollierte insbesondere Zoom-Wechsel, SVG-/Canvas-Klicks,
+außerhalb eines Gebiets liegende Übersichtspunkte, zusammenfallende
+Popup-Zuordnungen und falsche Gleichsetzungen benannter Einrichtungen
+mit ähnlich benannten Straßen.
+
+Die Sichtprüfung erkannte einen WebKit-Darstellungsfehler, den eine reine
+CSS-Prüfung übersehen hatte. Der Graufilter sitzt nun unmittelbar auf den
+Kartenbildern. Die ergänzte Prüfung der tatsächlich gerenderten Pixel
+ermittelte in einem freien Grundkartenausschnitt in beiden Engines
+**0 Prozent farbige Pixel**. Quellenfenster und Seitenfenster sind lesbar.
+In beiden Berichten stehen keine Seiten-, Konsolen- oder lokalen
+Assetfehler. Chromium meldete zwei bei schnellem Kartenwechsel abgebrochene
+OSM-Kachelanfragen; WebKit meldete keine fehlgeschlagenen Anfragen.
+
+Die abschließende Sichtnachprüfung fand noch eine Überdeckung der
+Quellenzeile durch die mobile Zeitleiste. Deshalb reserviert die mobile
+Zeitleiste zusätzlichen Platz über der Attribution. Ein **22. Browserprüfpunkt**
+misst nun auch bei ausdrücklich geöffneter Zeitleiste deren Abstand zur
+vollständigen Quellenzeile und prüft den freien Abstand zur Navigation.
+Der Bericht speichert diesen Pixelabstand vor der Aufnahme. Der abschließende
+CI-Nachweis dieses Nachtrags und die Veröffentlichung werden in
+[PR #4](https://github.com/carstenartur/ratsatlas-Hannover/pull/4) und den
+[Pages-Läufen auf main](https://github.com/carstenartur/ratsatlas-Hannover/actions/workflows/veroeffentlichen.yml?query=branch%3Amain)
+festgehalten; die archivierten Berichte oben sind ausdrücklich die
+Vorprüfung vor diesem letzten Abstands-Nachtrag.
+
+### Grenzen
+
+100.103 Vorgänge bleiben ohne Kartenort. Von 9.402 zuvor unkartierten
+Vorgängen mit bereits vorhandenen Ortsangaben konnten 632 ergänzt werden;
+8.770 solcher Vorgänge bleiben offen. Ein Name oder eine Kontaktadresse
+allein genügt nicht als belastbarer Vorgangsort. Straßenachsen geben
+Straßenverläufe wieder, Projektpunkte keine Grundstücksgrenzen. Die
+Gebietszuordnung wird an den vollständigen amtlichen Grenzen berechnet;
+ein Vorgang kann mehrere Gebiete berühren, weshalb Gebietsanzahlen nicht
+addiert werden dürfen. Sechs verortete Vorgänge außerhalb des Stadtgebiets
+bleiben in der übergreifenden Suche erreichbar. Quellen und Methoden stehen
+in [DATEN.md](DATEN.md), [Geocoding](../data/geocoding/README.md) und
+[Geographie](../data/geography/README.md).
+
 ## Bonn-Integration — 21. November 2026
 
 Die Anwendung mit den übernommenen Bonner Komponenten wurde mit dem

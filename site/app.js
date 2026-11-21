@@ -3,11 +3,11 @@
  * daimpad/ratsatlas-bonn@f8850008e81825ae79be49ca7f3441b928a1858b (MIT).
  * The verified AtlasData store, qualified identifiers and original geometries
  * remain the data authority. No Bonn-only datasets or legal rules are used. */
-import {AtlasData} from './data.js?v=kartenorte-20261121-3';
-import {LEVELS, readState, writeState} from './view-state.js?v=kartenorte-20261121-3';
-import {createBonnPanels} from './bonn-panels.js?v=kartenorte-20261121-3';
-import {createHannoverTimeline} from './timeline-adapter.js?v=kartenorte-20261121-3';
-import {createMapGeography,overviewPoint,combineCoincidentFeatures} from './map-geography.js?v=kartenorte-20261121-3';
+import {AtlasData} from './data.js?v=kartenorte-20261121-4';
+import {LEVELS, readState, writeState} from './view-state.js?v=kartenorte-20261121-4';
+import {createBonnPanels} from './bonn-panels.js?v=kartenorte-20261121-4';
+import {createHannoverTimeline} from './timeline-adapter.js?v=kartenorte-20261121-4';
+import {createMapGeography,overviewPoint,combineCoincidentFeatures} from './map-geography.js?v=kartenorte-20261121-4';
 
 const $ = id => document.getElementById(id);
 const format = n => Number(n).toLocaleString('de-DE');

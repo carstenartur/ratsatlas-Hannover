@@ -81,7 +81,7 @@ async function grayscaleBasemap() {
   assert.ok(coloredFraction<0.005,`painted basemap contains ${(coloredFraction*100).toFixed(2)}% colored pixels`);
   report.assertions.push('Rendered desktop basemap pixels are grayscale in the unobstructed tile sample');
 }
-async function mobileAttribution() {
+async function mobileAttribution({timelineOpen=false}={}) {
   const attribution=page.locator('#map .leaflet-control-attribution');
   for (const name of [/Ratsatlas Bonn/,'Datenschutz']) {
     assert.ok(await attribution.getByRole('link',{name}).isVisible(),`missing visible mobile attribution link: ${name}`);
@@ -90,6 +90,15 @@ async function mobileAttribution() {
   assert.ok(credits?.height&&status?.height&&nav?.height,'mobile attribution, map status and navigation must be visible');
   assert.ok(status.y+status.height<=credits.y,'map status overlaps mobile attribution');
   assert.ok(credits.y+credits.height<=nav.y,'mobile navigation overlaps attribution');
+  if (timelineOpen) {
+    const timeline=await page.locator('#timeline-wrap').boundingBox();
+    assert.ok(timeline?.height,'the mobile timeline must be visible');
+    const gap=credits.y-(timeline.y+timeline.height);
+    report.mobileTimelineAttributionGap=gap;
+    assert.ok(gap>=0,`mobile timeline covers ${(-gap).toFixed(1)}px of attribution`);
+    report.assertions.push('The open mobile timeline ends above the full attribution bar');
+    return;
+  }
   report.assertions.push('Mobile attribution includes Bonn and privacy links between the map status and navigation');
 }
 async function hits(count) {
@@ -476,7 +485,7 @@ try {
   await overflow(); await capture('mobile-map');
   await mobileAttribution();
   await showSheet('timeline-wrap');
-  await overflow(); await capture('mobile-timeline');
+  await overflow(); await mobileAttribution({timelineOpen:true}); await capture('mobile-timeline');
   const phoneViews=await Promise.all(['mobile-list','mobile-map','mobile-timeline'].map(name=>readFile(resolve(output,name+'.png'))));
   for(let i=0;i<phoneViews.length;i++) for(let j=i+1;j<phoneViews.length;j++) assert.ok(!phoneViews[i].equals(phoneViews[j]),'distinct phone views produced the same screenshot');
   report.assertions.push('Phone list, unobstructed map and timeline are explicitly selected, painted and captured as distinct views');
@@ -497,7 +506,7 @@ try {
   assert.deepEqual(report.requestFailures.filter(r=>r.url.startsWith(url)&&!/ERR_ABORTED|cancelled|canceled|Aborted/i.test(String(r.error))),[]);
   assert.deepEqual([...runtimeRequests.keys()].sort(),[...runtimeAssets].sort(),'runtime asset coverage');
   const releases=new Set([...runtimeRequests.values()].flatMap(values=>[...values]));
-  assert.deepEqual([...releases],['kartenorte-20261121-3'],'runtime files must use the same current cache version');
+  assert.deepEqual([...releases],['kartenorte-20261121-4'],'runtime files must use the same current cache version');
   report.assertions.push('Browser and search worker load one consistently versioned runtime, independent of old unversioned cache entries');
 } catch(error) {
   report.failure=error.message;

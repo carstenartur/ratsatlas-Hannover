@@ -136,7 +136,7 @@ button:disabled:hover { transform: none; }
   .filters input[type=date] { min-height: 44px; font-size: 16px; }
   .icon-btn, .btn, .link-btn { min-height: 44px; }
   .list-summary .link-btn { flex: none; }
-  #timeline-wrap { bottom: calc(86px + env(safe-area-inset-bottom)); max-height: min(55vh, calc(100dvh - 155px)); }
+  #timeline-wrap { bottom: calc(124px + env(safe-area-inset-bottom)); max-height: min(55vh, calc(100dvh - 155px)); }
   #timeline-wrap .timeline-close { width: 44px; height: 44px; top: 6px; right: 6px; }
   #timeline-wrap .tl-bar { padding-right: 44px; }
   #timeline-wrap .tl-stage { min-height: 112px; }
