@@ -1,9 +1,9 @@
 // Hannover data contract for the upstream Ratsatlas Bonn Timeline module.
 // This adapter consumes only the complete search projection and an explicitly
 // opened record. It never loads all record details or invents meeting dates.
-import './timeline.js?v=bonn-20261121-1';
-import { isoDay } from './search.js?v=bonn-20261121-1';
-import { TIMELINE_ZOOMS } from './view-state.js?v=bonn-20261121-1';
+import './timeline.js?v=kartenorte-20261121-4';
+import { isoDay } from './search.js?v=kartenorte-20261121-4';
+import { TIMELINE_ZOOMS } from './view-state.js?v=kartenorte-20261121-4';
 
 export function timelineData(histogram, manifest = {}) {
   if (!histogram) throw new Error('Die Datumsverteilung fehlt im Suchergebnis.');

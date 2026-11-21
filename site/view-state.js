@@ -1,9 +1,10 @@
-import { isoDay } from './search.js?v=bonn-20261121-1';
+import { isoDay } from './search.js?v=kartenorte-20261121-4';
 
 export const LEVELS = ['city','region','state'];
 export const PANELS = ['list','detail','timeline'];
 export const TIMELINE_ZOOMS = ['Jahr','Quartal','Monat','Woche','Tag'];
-const defaults = {query:'', levels:LEVELS, yearFrom:'', yearTo:'', dateFrom:'', dateTo:'', mappedOnly:false, record:'', lat:52.375, lng:9.735, zoom:12, pane:'list', page:1, panels:['detail'], timelineZoom:'Jahr', timelineCenter:''};
+const defaults = {query:'', area:'', levels:LEVELS, yearFrom:'', yearTo:'', dateFrom:'', dateTo:'', mappedOnly:false, record:'', lat:52.375, lng:9.735, zoom:12, pane:'list', page:1, panels:['detail'], timelineZoom:'Jahr', timelineCenter:''};
+const areaId = value => /^(?:bezirk|stadtteil):\d{2}$/.test(value || '') ? value : '';
 
 // Legacy links had a list/map background plus a separately opened record dialog.
 // Derive the equivalent Bonn sheet from normalized values, and use exactly the
@@ -15,7 +16,7 @@ function impliedPanels(state) {
   const hasSearch = String(state.query || '').trim() ||
     LEVELS.some(level => !levels.includes(level)) ||
     /^\d{4}$/.test(String(state.yearFrom || '')) || /^\d{4}$/.test(String(state.yearTo || '')) ||
-    isoDay(state.dateFrom) || isoDay(state.dateTo) || state.mappedOnly || Number(state.page) > 1;
+    isoDay(state.dateFrom) || isoDay(state.dateTo) || state.mappedOnly || areaId(state.area) || Number(state.page) > 1;
   return hasSearch ? ['list'] : [...defaults.panels];
 }
 
@@ -28,7 +29,7 @@ export function readState(url) {
   }
   const year = key => /^\d{4}$/.test(p.get(key)) ? p.get(key) : '';
   const state = {
-    query:p.get('q') || '', levels:p.has('ebenen') ? LEVELS.filter(l => p.get('ebenen').split(',').includes(l)) : [...LEVELS],
+    query:p.get('q') || '', area:areaId(p.get('gebiet')), levels:p.has('ebenen') ? LEVELS.filter(l => p.get('ebenen').split(',').includes(l)) : [...LEVELS],
     yearFrom:year('von'), yearTo:year('bis'), mappedOnly:p.get('verortet') === '1', record:p.get('vorgang') || '',
     dateFrom:isoDay(p.get('von')), dateTo:isoDay(p.get('bis')),
     lat:number('lat',defaults.lat,-85,85), lng:number('lng',defaults.lng,-180,180), zoom:number('z',defaults.zoom,2,19,true),
@@ -44,7 +45,7 @@ export function writeState(base,state) {
   url.search = '';
   const implied = impliedPanels(state);
   const panels = state.panels || implied;
-  const entries = {q:state.query, ebenen:state.levels.join(',') === LEVELS.join(',') ? null : state.levels.join(','),
+  const entries = {q:state.query, gebiet:areaId(state.area) || null, ebenen:state.levels.join(',') === LEVELS.join(',') ? null : state.levels.join(','),
     von:isoDay(state.dateFrom) || state.yearFrom || null, bis:isoDay(state.dateTo) || state.yearTo || null, verortet:state.mappedOnly ? 1 : null, vorgang:state.record || null,
     lat:state.lat === defaults.lat ? null : state.lat, lng:state.lng === defaults.lng ? null : state.lng,
     z:state.zoom === defaults.zoom ? null : state.zoom, ansicht:state.pane === 'map' ? 'karte' : null, seite:state.page === 1 ? null : state.page,

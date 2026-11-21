@@ -21,6 +21,7 @@ bytegleich mit dem Lizenztext dieses Forks. [Bonner Lizenz](https://github.com/d
 | `site/style.css` | [`site/style.css`](../site/style.css) | Original-Stylesheet für die vollflächige Karte, Navigation, Fenster und Zeitleiste. Hannover-spezifische Regeln stehen in [`site/hannover.css`](../site/hannover.css). |
 | `site/index.html` | [`site/index.html`](../site/index.html) | Abgeleitete Struktur der Karte, Navigation, Liste, Detailansicht und Zeitleiste. Hannover ergänzt Such- und Quellenfilter, Datenstatus, Teilen und eigene Metadaten. |
 | `site/app.js` | [`site/bonn-panels.js`](../site/bonn-panels.js), [`site/app.js`](../site/app.js) | Abgeleitete Fenstersteuerung für Liste, Vorgang und Zeitleiste, inklusive Fokus, mobiler Navigation und Größenänderung per Zeiger und Tastatur. Auch die Darstellung von Liste, Details und Verfahrensschritten folgt dem Bonner Aufbau. |
+| `site/app.js` (Gebietsnavigation) | [`site/map-geography.js`](../site/map-geography.js) | Übernommene Flächenfarben, Gebietsansichten, Beschriftung und Legende. Die Auswahl führt für Hannover vom Stadtbezirk über den Stadtteil zu den belegten Orten. Gebietsschlüssel und Trefferzahlen stammen aus dem örtlichen SKH5-Datensatz und der ergänzten Karte. |
 | `site/timeline.js` | [`site/timeline.js`](../site/timeline.js) | Bonner Zeitleiste mit Anpassungen für Tagesaggregate, verfügbare Spuren, getrennten Quellenprüfstand und Datenzeitraum, das Aufheben des Zeitfilters sowie die URL-Anbindung für Zoom und Mittelpunkt. Lade- und Fehlerzustände sperren datenabhängige Eingaben; abgeschlossene Zeitfilteränderungen werden sofort übernommen. |
 
 [`site/app.js`](../site/app.js) bindet die übernommenen Komponenten an den
@@ -33,6 +34,12 @@ Mittelpunkt der Zeitleiste. Das frühere Hannover-Stylesheet `site/app.css`
 entfällt. Die vorhandenen Klassen für Datenschutz und 404-Seite liegen in
 [`site/portal.css`](../site/portal.css).
 
+Der Gebietsschlüssel `gebiet` verbindet die Auswahl auf der Karte mit Liste
+und Zeitleiste. Für ein Gebiet zählt jeder passende Vorgang einmal. Bei der
+Auswahl aus der Liste oder über eine Verknüpfung hebt die Hannover-Anbindung
+die Geometrien orange hervor und passt den Kartenausschnitt an. Abfragen an
+Bonner Datendienste sind dafür nicht erforderlich. [Hannover-Gebietsgrundlagen](../data/geography/README.md)
+
 Die Hannover-Anbindung erhält den Suchfokus bei verspätet geladenen Details,
 reserviert beim Vergrößern der Seitenfenster Platz für die Zeitleiste und
 zeigt deren Zeitvorgaben einschließlich Zurücksetzen auch auf dem Telefon.
@@ -41,7 +48,8 @@ sie außerhalb des Datenzeitraums liegen. [Prüfnachweise](QA.md)
 
 ## Datenabhängige Bonner Funktionen
 
-Haushalt, Gebietsstatistik, Themenseiten, zusätzliche Geodaten, Bonner
+Haushalt, zusätzliche statistische Gebietsmerkmale, Themenseiten, Bonner Fachdaten,
+Bonner
 Verfahrensmodelle und Ortsrecht, Beteiligungsfristen, Feeds, Einführungstour
 und KI-Ratsassistent gehören zum Bonner Stand. Sie setzen Bonner Daten,
 Regelwerke oder Dienste voraus und sind in Hannover nicht eingebunden. Die
@@ -80,7 +88,8 @@ Wahlperiodenspuren sind in Hannover deaktiviert. [Hannover-Daten und Grenzen](DA
    Datei die jeweilige Herkunft einzeln eintragen.
 4. JavaScript- und Python-Tests, Offlineprüfung sowie Browserprüfungen in
    Chromium und WebKit mit dem Hannover-Datenpaket ausführen. Besonders
-   Zeitfilter und undatierte Treffer, Originalgeometrien, Verknüpfungen sowie
+   Gebiets- und Zeitfilter, undatierte Treffer, Originalgeometrien, hinzugekommene
+   Ortsbelege, die Hervorhebung bei Auswahl, Verknüpfungen sowie
    die Wiederherstellung bisheriger und neuer URLs prüfen. Auf Telefon und
    Tablet auch Navigation und Fenster kontrollieren. [Prüfbefehle](../README.md#prüfen)
 

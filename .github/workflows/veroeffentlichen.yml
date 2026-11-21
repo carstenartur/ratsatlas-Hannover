@@ -27,6 +27,11 @@ jobs:
           python-version: '3.12'
       - name: Vollständigen Datenstand aus dem Archiv bereitstellen
         run: python3 scripts/snapshot_bundle.py unpack
+      - name: Belegte Kartenorte und amtliche Gebietszuordnung erzeugen
+        run: |
+          python3 -m pip install -r requirements-geo.txt
+          python3 scripts/enrich_locations.py --source-dir site/data/ris --output-dir site/data/enriched
+          python3 scripts/build_geography.py --data-dir site/data/enriched
       - name: Browser-Prüfwerkzeug installieren
         run: npm ci --ignore-scripts --no-audit --no-fund
       - name: JavaScript-Tests
@@ -71,6 +76,11 @@ jobs:
           python-version: '3.12'
       - name: Geprüften Datenstand aus dem Archiv bereitstellen
         run: python3 scripts/snapshot_bundle.py unpack
+      - name: Geprüfte Orts- und Gebietsableitungen erzeugen
+        run: |
+          python3 -m pip install -r requirements-geo.txt
+          python3 scripts/enrich_locations.py --source-dir site/data/ris --output-dir site/data/enriched
+          python3 scripts/build_geography.py --data-dir site/data/enriched
       - name: Lizenzen und Herkunft mit ausliefern
         run: |
           cp LICENSE site/LICENSE

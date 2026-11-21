@@ -2,6 +2,19 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readState, writeState} from '../site/view-state.js';
 
+test('a chosen district or neighborhood survives links without losing independent filters', () => {
+  const base = 'https://example.org/atlas/';
+  for (const area of ['bezirk:13','stadtteil:01']) {
+    const view = {...readState(base),area,query:'Schule',levels:['city'],dateFrom:'2020-01-01'};
+    const shared = writeState(base,view);
+    assert.equal(shared.searchParams.get('gebiet'),area);
+    assert.deepEqual(readState(shared),view);
+  }
+  assert.equal(readState(base+'?gebiet=stadtteil:01').panels[0],'list');
+  assert.equal(readState(base+'?gebiet=../../outside').area,'');
+  assert.equal(readState(base).area,'');
+});
+
 test('complete shared view round-trips under a repository path', () => {
   const url = new URL('https://example.org/atlas/');
   const state = {...readState(url), query:'Straße & ÖPNV', levels:['region','state'], yearFrom:'2005', yearTo:'2024', mappedOnly:true, record:'region:12/3-A', lat:52.42, lng:9.81, zoom:14, pane:'map', page:2};

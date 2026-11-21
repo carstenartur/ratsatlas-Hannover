@@ -2,6 +2,10 @@
    Bonn source: daimpad/ratsatlas-bonn@f8850008e81825ae79be49ca7f3441b928a1858b (MIT).
    The map, glass navigation, panels, list, process line and timeline use style.css. */
 :root { --font-display: "Inter", system-ui, sans-serif; --city: #6d28d9; --region: #24715e; --state: #a05216; }
+/* Filter the actual tile images: WebKit can omit the composited parent filter. */
+#map.map-gray .leaflet-tile-pane { -webkit-filter: none; filter: none; }
+#map.map-gray .leaflet-tile { -webkit-filter: grayscale(1) contrast(.9) brightness(1.08); filter: grayscale(1) contrast(.9) brightness(1.08); }
+.panel.glass, .nav.glass, .info-dialog.glass, #timeline-wrap.glass { background: rgba(255,255,255,.96); }
 [hidden]:not(.panel) { display: none !important; }
 .icon-defs { position: absolute; width: 0; height: 0; overflow: hidden; }
 .brand, .site-title a { text-decoration: none; }
@@ -9,6 +13,10 @@
 .skip-link { position: fixed; top: -100px; left: 16px; z-index: 4000; padding: 12px 16px; background: #fff; border-radius: 12px; }
 .skip-link:focus { top: 16px; }
 .nav-search { margin: 0; max-width: none; }
+.area-picker { flex: none; }
+.area-picker select { max-width: 190px; min-height: 40px; }
+.geography-status { position: fixed; left: 16px; bottom: 80px; z-index: 750; padding: 10px 14px; max-width: min(360px,calc(100vw - 32px)); font-size: 13px; }
+#area-note { margin: 10px 0 0; }
 .nav-search input { font-size: 15px; }
 .nav .brand { font-size: 18px; }
 .nav .menu-btn { min-height: 40px; }
@@ -73,8 +81,7 @@ button:disabled:hover { transform: none; }
 #timeline-wrap .timeline-retry { margin: 8px 0; }
 .map-info { position: fixed; left: 50%; bottom: 30px; transform: translateX(-50%); z-index: 750; display: flex; align-items: center; gap: 14px; padding: 8px 14px; font-size: 12px; white-space: nowrap; max-width: calc(100vw - 32px); }
 .map-info .link-btn { font-size: 12px; }
-.source-footer { position: fixed; left: 50%; bottom: 7px; transform: translateX(-50%); z-index: 750; max-width: calc(100vw - 32px); padding: 2px 8px; border-radius: 8px; background: rgba(255,255,255,.88); color: var(--text-muted); font-size: 10px; white-space: nowrap; }
-.source-footer a { color: var(--text-muted); }
+.leaflet-control-attribution { max-width: calc(100vw - 32px); font-size: 11px; line-height: 1.4; white-space: normal; }
 .leaflet-top { top: var(--top); }
 .leaflet-control-zoom { margin-top: 8px !important; }
 .leaflet-popup-content { width: min(320px, calc(100vw - 78px)) !important; max-height: 50vh; overflow: auto; margin: 14px 16px; }
@@ -114,6 +121,9 @@ button:disabled:hover { transform: none; }
   .nav-search { min-width: 180px; }
 }
 @media (max-width: 900px) {
+  .area-picker { width: 100%; }
+  .area-picker select { width: 100%; max-width: none; min-height: 44px; }
+  .geography-status { bottom: calc(145px + env(safe-area-inset-bottom)); }
   .nav { bottom: max(10px, env(safe-area-inset-bottom)); }
   .nav-search input { font-size: 16px; }
   .nav-more { bottom: calc(76px + env(safe-area-inset-bottom)); max-height: calc(100dvh - 150px - env(safe-area-inset-bottom)); }
@@ -126,16 +136,17 @@ button:disabled:hover { transform: none; }
   .filters input[type=date] { min-height: 44px; font-size: 16px; }
   .icon-btn, .btn, .link-btn { min-height: 44px; }
   .list-summary .link-btn { flex: none; }
-  #timeline-wrap { bottom: calc(86px + env(safe-area-inset-bottom)); max-height: min(55vh, calc(100dvh - 155px)); }
+  #timeline-wrap { bottom: calc(124px + env(safe-area-inset-bottom)); max-height: min(55vh, calc(100dvh - 155px)); }
   #timeline-wrap .timeline-close { width: 44px; height: 44px; top: 6px; right: 6px; }
   #timeline-wrap .tl-bar { padding-right: 44px; }
   #timeline-wrap .tl-stage { min-height: 112px; }
   #timeline-wrap .tl-presets { display: flex; flex-wrap: wrap; width: 100%; }
   #timeline-wrap .tl-presets .tl-chip { flex: 1; white-space: normal; }
-  .map-info { bottom: calc(103px + env(safe-area-inset-bottom)); padding: 0 10px; gap: 12px; }
-  .source-footer { bottom: calc(81px + env(safe-area-inset-bottom)); font-size: 10px; }
+  .map-info { bottom: calc(124px + env(safe-area-inset-bottom)); padding: 0 10px; gap: 12px; }
   .leaflet-top { top: 57px; }
   .leaflet-bottom { bottom: calc(76px + env(safe-area-inset-bottom)); }
+  .leaflet-bottom.leaflet-left { top: 57px; bottom: auto; }
+  .leaflet-bottom.leaflet-left .leaflet-control { margin-top: 10px; }
   .leaflet-control-attribution { max-width: calc(100vw - 20px); white-space: normal; font-size: 10px; }
   .info-dialog { width: calc(100vw - 20px); padding: 0 16px 18px; }
   .dialog-head h2 { font-size: 18px; }

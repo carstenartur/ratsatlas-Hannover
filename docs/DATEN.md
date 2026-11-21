@@ -11,7 +11,7 @@ Die lokale Fassung liegt unverändert im versionierten
 [Datenarchiv](../data/hannover-snapshot.parts.json). Nach dem Entpacken steht sie unter
 site/data/ris/hannover.json bereit.
 
-| Ebene | Vorgänge | Mit Geometrie | Ohne Geometrie |
+| Quellebene | Vorgänge | Mit Originalgeometrie | Ohne Originalgeometrie |
 |---|---:|---:|---:|
 | Stadt Hannover | 95.535 | 7.969 | 87.566 |
 | Region Hannover | 14.055 | 35 | 14.020 |
@@ -20,8 +20,7 @@ site/data/ris/hannover.json bereit.
 
 Es gibt **3.395 vorhandene Geometrien**. Anzahl der Geometrien, der Ortsbezüge
 und der verorteten Vorgänge sind unterschiedliche Größen. Mehrere Vorgänge
-können dieselbe Geometrie verwenden. Vorgänge ohne Geometrie bleiben im Suchindex;
-es werden keine künstlichen Punkte hinzugefügt.
+können dieselbe Geometrie verwenden. Die Gesamtsuche erfasst jeden Vorgang.
 
 Zum Quellpaket gehören 6.905 unveränderliche Gzip-Dateien mit zusammen 27.264.335
 komprimierten und 243.204.894 entpackten Bytes laut geprüfter
@@ -34,6 +33,51 @@ Die übernommene Generation lautet:
 ~~~text
 23e2e6b3f2b0bed02956caf3e8446cb23943e75147be6060cf230dcc4a644ca0
 ~~~
+
+## Wie die ergänzten Kartenorte entstehen
+
+Der Quellimport bewahrt die verkehrsbezogene Ortsbewertung der Unfallwerkbank.
+Beim Aufbau des Ratsatlas werden bislang unverortete **städtische** Vorgänge erneut
+auf belegte Maßnahmenorte geprüft. Berücksichtigt werden klare Standortangaben
+im Titel und abgegrenzte Ortsbelege im Originaldokument. Jeder zusätzliche Ort
+führt Beleg, Methode, Quelle und räumliche Genauigkeit mit.
+
+| Zuordnung | Neu verortete Vorgänge | Bedeutung auf der Karte |
+|---|---:|---|
+| Amtliche Straßenachse aus dem Titel | 1.280 | Verlauf der genannten Straße zur Orientierung. Die genaue Lage entlang dieser Straße bleibt offen. |
+| Amtliche Hauskoordinate aus dem Titel | 169 | Exakte Übereinstimmung von Straße und Hausnummer, einschließlich Buchstabenzusatz. |
+| Amtliche Hauskoordinate aus dem Dokument | 18 | Eindeutige Adresse eines ausdrücklich benannten Vorhabenstandorts oder einer auch im Titel örtlich eingegrenzten Einrichtung. |
+| Hausnummernspanne im Titel | 12 | Bestätigte Koordinaten der beiden Endadressen. Der räumliche Umriss ist offen. |
+| Bestätigter Bumke-Projektstandort | 19 | Öffentlicher Standortmarker der Landeshauptstadt Hannover. |
+| **Gesamt** | **1.498** | **533 ergänzte Kartengeometrien mit eigenen Kennungen** |
+
+Der Ratsatlas enthält damit **9.502 verortete Vorgänge und 3.928 Kartengeometrien**.
+Über die Suche nach „Bumke“ sind alle acht Vorgänge mit diesem Namen im Titel,
+zehn weitere Titel zum Bebauungsplan 1862 „Oberstraße“ und die Anfrage 0701/2020
+erreichbar. Bei der Petition 0673/2020 und der Anfrage belegen amtliche
+Dokumente, dass die Neubebauung Gegenstand ist. Der Projektmarker liegt bei
+52,3824° N und 9,72521° E. Der Bebauungsplan umfasst zusätzliche Grundstücke.
+[Standort und Einzelnachweise](../data/geocoding/bumke.json)
+
+**100.103 Vorgänge bleiben ohne Kartenort.** Unter ihnen haben 8.770 bereits
+Ortsbezeichnungen aus dem Quellpaket. Das können bislang unaufgelöste Standorte,
+Kontakt- und Empfängeradressen oder unklare Adressspannen sein.
+Schulen, Kitas, Haltestellen, Spiel- und Parkplätze können nach einer anderen
+Straße benannt sein. Der Name allein genügt deshalb nicht als Beleg für den
+Straßenverlauf. Das Verzeichnis
+für die Stadt Hannover wird ausschließlich auf städtische Vorlagen angewendet.
+Die heutigen Hauskoordinaten belegen die Lage im verwendeten Datenstand und
+können bei historischen Vorgängen vom damaligen Zustand abweichen. [Ortsgrundlagen und Lizenz](../data/geocoding/README.md)
+
+## Wie die Gebietszuordnung zählt
+
+Die amtliche SKH5-Gliederung der Landeshauptstadt Hannover umfasst 13 benannte
+Stadtbezirke und 51 benannte Stadtteile. Entscheidend ist, ob eine Geometrie des
+Vorgangs die jeweilige Gebietsfläche berührt oder schneidet. Der Ratsatlas zählt
+denselben Vorgang innerhalb eines Gebiets nur einmal. Eine Straße durch mehrere
+Stadtteile kann daher in mehreren Stadtteilsummen erscheinen. Die Zahlen
+beziehen sich auf die aktuellen Filter. Unverortete Vorgänge und Kartenorte
+außerhalb des Stadtgebiets bleiben über die Gesamtsuche erreichbar. [Amtliche Gebietsgrundlagen](../data/geography/README.md)
 
 ## Drei verschiedene Zeitstände
 
@@ -83,10 +127,10 @@ Landtagskennungen ohne Präfix ergänzt sie das Quellenpräfix nur in ihrer
 Suchprojektion; sourceId enthält weiterhin die Originalkennung.
 
 Eine politische Quellenebene ist kein genauer Wirkungsort. Ein Stadt-, Regions-
-oder Landesvorgang bekommt deshalb nicht automatisch eine Geometrie. Die Karte
-übernimmt ausschließlich die vorhandenen Geometrien und Zuordnungen. Belege
-und Genauigkeitsangaben stammen aus dem Quellpaket; der Import ist keine neue
-fachliche Abnahme dieser Verortungen.
+oder Landesvorgang erhält einen Kartenort nur über eine konkrete Zuordnung.
+Die Vorgangsansicht verbindet die ursprünglichen Ortsbelege mit den ergänzten
+Nachweisen. Die neue Verortung verwendet keine automatische Übertragung von
+Koordinaten auf verwandte Vorgänge.
 
 Die Suche berücksichtigt die bereitgestellten Suchfelder und Ortsbezeichnungen.
 Sie durchsucht nicht automatisch alle verlinkten PDFs oder vollständigen

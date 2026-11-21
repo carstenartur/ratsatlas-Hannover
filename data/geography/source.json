@@ -1,0 +1,17 @@
+{
+  "dataset": "Statistische Gliederung SKH5",
+  "publisher": "Landeshauptstadt Hannover, Bereich Geoinformation",
+  "attribution": "Datenquelle: CC-BY-4.0 – Bereich Geoinformation – LH Hannover",
+  "url": "https://www.hannover.de/Leben-in-der-Region-Hannover/Verwaltungen-Kommunen/Die-Verwaltung-der-Landeshauptstadt-Hannover/Dezernate-und-Fachbereiche-der-LHH/Stadtentwicklung-und-Bauen/Fachbereich-Planen-und-Stadtentwicklung/Geoinformation/Open-GeoData/Themenkarten-und-statistische-Gliederung/Statistische-Gliederungen/Statistische-Gliederung-SKH5",
+  "downloadUrl": "https://www.hannover.de/content/download/887881/file/SKH5_Statistische_Gliederung.zip",
+  "license": "CC BY 4.0",
+  "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+  "archiveSha256": "cdd2f16d6bf62c37d71e728adb38f9b9b95a1f6966cee1e077bda276518c871b",
+  "snapshotSha256": "9c19e14511cbd6fae7e810d93faebb6c0f0f88b4d9ab8b632a3bacd01fd15764",
+  "retrieved": "2026-11-21",
+  "published": "2026-01-20",
+  "sourceUpdated": "2025-12-17",
+  "sourceCrs": "EPSG:25832",
+  "snapshotCrs": "EPSG:4326",
+  "changes": "Stadtbezirk- und Stadtteilflächen mit Namen und amtlichen Schlüsseln ausgewählt, je zwei unbenannte Flächen weggelassen, in WGS 84 transformiert. Die Kartendarstellung wird vereinfacht."
+}

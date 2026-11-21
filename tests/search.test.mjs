@@ -1,5 +1,24 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+
+test('geographic membership restricts pagination, matching IDs and the entire non-date histogram', () => {
+  const rows = [
+    {id:'city:a',title:'Schule A',level:'city',date:'2024-01-01',mapped:true},
+    {id:'city:b',title:'Schule B',level:'city',date:'2025-01-01',mapped:true},
+    {id:'city:c',title:'Schule C',level:'city',date:'2026-01-01',mapped:true},
+    {id:'city:d',title:'Schule D',level:'city',date:null,mapped:false}
+  ];
+  const index = new SearchIndex(rows);
+  const result = index.search({query:'Schule',recordIds:['city:a','city:c','city:c'],limit:1});
+  assert.equal(result.total,2);
+  assert.equal(result.items[0].id,'city:c');
+  assert.deepEqual(result.matchedIds,['city:c','city:a']);
+  assert.deepEqual(result.timeline.daily,[['2024-01-01',1],['2026-01-01',1]]);
+  assert.equal(result.timeline.undatedCount,0);
+  assert.equal(index.search({recordIds:[]}).total,0);
+  assert.equal(index.search({recordIds:['city:a','city:c'],dateFrom:'2025-01-01'}).total,1);
+  assert.equal(index.search({query:'Schule'}).total,4);
+});
 import { SearchIndex, normalize } from '../site/search.js';
 
 const rows = [

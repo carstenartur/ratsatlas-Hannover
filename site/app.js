@@ -3,19 +3,25 @@
  * daimpad/ratsatlas-bonn@f8850008e81825ae79be49ca7f3441b928a1858b (MIT).
  * The verified AtlasData store, qualified identifiers and original geometries
  * remain the data authority. No Bonn-only datasets or legal rules are used. */
-import {AtlasData} from './data.js?v=bonn-20261121-1';
-import {LEVELS, readState, writeState} from './view-state.js?v=bonn-20261121-1';
-import {createBonnPanels} from './bonn-panels.js?v=bonn-20261121-1';
-import {createHannoverTimeline} from './timeline-adapter.js?v=bonn-20261121-1';
+import {AtlasData} from './data.js?v=kartenorte-20261121-4';
+import {LEVELS, readState, writeState} from './view-state.js?v=kartenorte-20261121-4';
+import {createBonnPanels} from './bonn-panels.js?v=kartenorte-20261121-4';
+import {createHannoverTimeline} from './timeline-adapter.js?v=kartenorte-20261121-4';
+import {createMapGeography,overviewPoint,combineCoincidentFeatures} from './map-geography.js?v=kartenorte-20261121-4';
 
 const $ = id => document.getElementById(id);
 const format = n => Number(n).toLocaleString('de-DE');
 const labels = {city:'Stadt', region:'Region', state:'Land'};
 const pageSize = 50;
-const atlas = new AtlasData();
-let state = readState(location.href);
+const selectionPane = 'record-selection';
+const atlas = new AtlasData({enrichmentUrl:new URL('./data/enriched/enrichment.json',import.meta.url)});
+const initialUrl = new URL(location.href);
+let state = readState(initialUrl);
+let focusRecordId = ['lat','lng','z'].some(key => initialUrl.searchParams.has(key)) ? '' : state.record;
+let initialMapFit = !state.record && !['lat','lng','z'].some(key => initialUrl.searchParams.has(key));
 let manifest, migration, map, collection, layers, selectedLayer, selectedData, matched;
-let lastQuery, lastRecord, searchVersion = 0, detailVersion = 0;
+let geography, geographyData, geographyReady = false, geographyLoading = true;
+let lastQuery, lastRecord, lastMapDraw, searchVersion = 0, detailVersion = 0;
 let ready = false, restoringMap = false, timer, pendingQuery = null;
 const join = (...values) => values.filter(Boolean).join(' · ');
 const date = raw => {
@@ -82,6 +88,7 @@ function clearPendingQuery() { clearTimeout(timer); pendingQuery = null; }
 function filter(patch = {}) {
   const query = pendingQuery ?? state.query;
   clearPendingQuery();
+  focusRecordId = '';
   selectedLayer?.remove(); selectedLayer = null;
   update({query,...patch,page:1,record:''});
 }
@@ -100,12 +107,16 @@ function render() {
   $('reset-dates').hidden = !hasDates;
   if (hasDates || state.mappedOnly) $('more-filters').open = true;
   $('active-filters').textContent = hasDates || state.mappedOnly ? 'aktiv' : '';
-  $('reset').hidden = !(state.query || state.levels.length !== LEVELS.length || hasDates || state.mappedOnly);
+  $('reset').hidden = !(state.query || state.area || state.levels.length !== LEVELS.length || hasDates || state.mappedOnly);
+  const area = geography?.getArea(state.area);
+  $('area-note').hidden = !state.area;
+  $('area-note').textContent = area ? `${area.properties.name}: Vorgänge mit belegtem Kartenort in diesem Gebiet. Mehrere Gebiete können denselben Vorgang enthalten.` : 'Die Gebietszuordnung wird geladen.';
   timeline.setState(state);
   if (!ready) return;
-  const key = JSON.stringify([state.query,state.levels,state.yearFrom,state.yearTo,state.dateFrom,state.dateTo,state.mappedOnly,state.page]);
+  const key = JSON.stringify([state.query,state.area,state.levels,state.yearFrom,state.yearTo,state.dateFrom,state.dateTo,state.mappedOnly,state.page]);
   if (key !== lastQuery) { lastQuery = key; runSearch(); }
   if (state.record !== lastRecord) { lastRecord = state.record; renderRecord(); }
+  drawFeatures();
 }
 async function runSearch() {
   const version = ++searchVersion;
@@ -113,7 +124,13 @@ async function runSearch() {
   map?.closePopup();
   $('count').textContent = 'Suche läuft …'; $('papers').setAttribute('aria-busy','true');
   try {
-    const result = await atlas.search({...state,offset:(state.page - 1) * pageSize,limit:pageSize});
+    if (state.area && !geographyReady) {
+      if (!geographyLoading) throw new Error('Die Gebietszuordnung ist nicht verfügbar. Wähle „Ganz Hannover“ oder lade die Gebiete erneut.');
+      $('count').textContent = 'Gebiet wird geladen …';
+      return;
+    }
+    const area = geography?.getArea(state.area);
+    const result = await atlas.search({...state,recordIds:state.area ? area?.properties.recordIds || [] : undefined,offset:(state.page - 1) * pageSize,limit:pageSize});
     if (version !== searchVersion) return;
     const pages = Math.max(1,Math.ceil(result.total / pageSize));
     if (state.page > pages) { update({page:pages},true); return; }
@@ -153,16 +170,19 @@ async function runSearch() {
 }
 function resetFilters() {
   timeline.reset();
-  filter({query:'',levels:[...LEVELS],yearFrom:'',yearTo:'',dateFrom:'',dateTo:'',mappedOnly:false});
+  filter({query:'',area:'',levels:[...LEVELS],yearFrom:'',yearTo:'',dateFrom:'',dateTo:'',mappedOnly:false});
 }
-function selectRecord(id) {
+function selectRecord(id, {fromMap = false} = {}) {
   if (pendingQuery !== null) filter();
+  focusRecordId = fromMap ? '' : id;
   panels.setPanel('detail',true,{notify:false});
   update({record:id,panels:panels.getState()});
+  fitRequestedRecord();
   panels.focusPanel('panel-detail');
 }
 function goHome() {
   clearPendingQuery();
+  focusRecordId = '';
   panels.setPanel('detail',true,{notify:false});
   update({record:'',panels:panels.getState()});
   if (!state.record) showIntro();
@@ -187,7 +207,7 @@ function showIntro() {
   $('detail-heading').textContent = 'Los geht’s';
   const body = $('detail');
   body.replaceChildren(node('p','Stadt · Region · Land','intro-kicker'),node('p','Was wird in Hannover beraten – und wo betrifft es dich?','intro-lead'));
-  body.append(node('p','Recherchiere öffentliche Vorgänge, verfolge ihren Verlauf und öffne die amtlichen Quellen. Die Karte zeigt die überlieferten Orte.'));
+  body.append(node('p','Wähle einen Stadtbezirk und dann einen Stadtteil auf der Karte – oder suche direkt nach einem Vorgang. Recherchiere Quellen, Beratungen und die belegten Orte.'));
   const stats = node('div',null,'intro-summary');
   if (manifest) {
     stats.append(node('strong',format(manifest.recordCount) + ' Vorgänge'));
@@ -226,7 +246,7 @@ function openMapRecords(feature,latlng) {
       const byId = new Map(records.map(record => [record.id,record]));
       list.replaceChildren(...visible.map(id => {
         const record = byId.get(id);
-        const el = button('',() => { map.closePopup(); selectRecord(id); },'');
+        const el = button('',() => { map.closePopup(); selectRecord(id,{fromMap:true}); },'');
         el.dataset.record = id;
         el.append(node('strong',record?.title || id),node('span',join(record?.number,date(record?.date)))); return el;
       }));
@@ -239,59 +259,138 @@ function openMapRecords(feature,latlng) {
   display(0);
 }
 function drawFeatures() {
-  if (!map || !collection || !matched) return;
-  map.closePopup(); layers?.remove();
-  const features = collection.features.filter(feature => feature.properties.recordIds.some(id => matched.has(id)));
+  if (!map) return;
+  geography?.update({areaId:state.area,matchedIds:matched,zoom:map.getZoom(),focusRecord:!!selectedData?.features.length});
+  if (!collection || !matched) return;
+  const area = geography?.getArea(state.area);
+  const places = geographyReady ? geography.mode === 'places' : (!geographyLoading && map.getZoom() >= 14 || !!selectedData?.features.length);
+  // A street's overview point can lie outside a small selected neighborhood.
+  // There the original path keeps its actually intersecting portion visible.
+  const detail = map.getZoom() >= 15 || area?.properties.kind === 'stadtteil';
+  // Panning, including a popup's automatic pan, must preserve the open popup
+  // and its layers. Rebuild only when their data or representation changes.
+  if (lastMapDraw?.collection === collection && lastMapDraw.matched === matched && lastMapDraw.area === state.area && lastMapDraw.places === places && lastMapDraw.detail === detail) return;
+  lastMapDraw = {collection,matched,area:state.area,places,detail};
+  map.closePopup(); layers?.remove(); layers = null;
+  const allowedGeometries = area ? new Set(area.properties.geometryIds) : null;
+  const features = collection.features.filter(feature => (!allowedGeometries || allowedGeometries.has(feature.properties.geometryId)) && feature.properties.recordIds.some(id => matched.has(id)));
+  $('map-count').textContent = format(features.length) + ' Kartenorte';
+  if (!places) return;
   const paint = feature => {
     const region = feature.properties.recordIds.some(id => matched.has(id) && id.startsWith('region-hannover-ris:'));
     return {color:region ? '#24715e' : '#6d28d9',weight:3,opacity:.8,fillOpacity:.27};
   };
-  layers = L.geoJSON(features,{
+  const display = detail ? features : features.map(feature => ({...feature,geometry:{type:'Point',coordinates:overviewPoint(feature.geometry)}})).filter(feature => feature.geometry.coordinates);
+  layers = L.geoJSON(combineCoincidentFeatures(display),{
     style:paint,
-    pointToLayer:(feature,ll) => L.circleMarker(ll,{...paint(feature),radius:5}),
+    pointToLayer:(feature,ll) => L.circleMarker(ll,{color:'#fff',weight:1.5,opacity:1,fillColor:paint(feature).color,fillOpacity:.85,radius:5}),
     onEachFeature(feature,layer) { layer.on('click',event => openMapRecords(feature,event.latlng)); }
   }).addTo(map);
-  $('map-count').textContent = format(features.length) + ' Kartenorte';
-  selectedLayer?.bringToFront();
 }
 function highlightRecord(data) {
   selectedLayer?.remove(); selectedLayer = null;
   if (!map || !data?.features?.length) return;
-  selectedLayer = L.geoJSON(data.features,{
+  const stroke = (color,weight,fillOpacity) => L.geoJSON(data.features,{
+    pane:selectionPane,
     interactive:false,
-    style:{color:'#c04c00',weight:5,fillOpacity:.18,interactive:false},
-    pointToLayer:(_feature,ll) => L.circleMarker(ll,{color:'#c04c00',weight:3,radius:9,interactive:false})
-  }).addTo(map);
+    style:{color,weight,fillOpacity},
+    pointToLayer:(_feature,ll) => L.circleMarker(ll,{pane:selectionPane,interactive:false,radius:10,fill:false})
+  });
+  selectedLayer = L.featureGroup([stroke('#21152e',9,0),stroke('#ffb000',5,.14)]).addTo(map);
 }
-function focusRecordMap(data) {
-  showMap(); highlightRecord(data);
+function mapPadding() {
+  if (!map) return {};
+  const mobile = panels.isMobile();
+  const list = $('panel-list'), detail = $('panel-detail'), time = $('timeline-wrap');
+  const left = mobile || list.hidden ? 0 : list.offsetWidth + 16;
+  const right = mobile || detail.hidden ? 0 : detail.offsetWidth + 16;
+  const {x:width,y:height} = map.getSize();
+  if (width <= left + right || height < 2) return {};
+  const gutter = Math.min(left || right ? 16 : 30,(width - left - right) / 4);
+  const bottom = Math.min(mobile ? 150 : 70,height / 3);
+  const top = Math.min(mobile || time.hidden ? 90 : 102 + time.offsetHeight,height - bottom - 1);
+  return {paddingTopLeft:[left + gutter,top],paddingBottomRight:[right + gutter,bottom]};
+}
+function fitSelectedGeometry() {
   if (!map || !selectedLayer) return;
-  const bottom = panels.isMobile() ? 150 : 70;
-  map.fitBounds(selectedLayer.getBounds(),{paddingTopLeft:[30,90],paddingBottomRight:[30,bottom],maxZoom:16,animate:false});
+  const bounds = selectedLayer.getBounds();
+  if (bounds.isValid()) map.fitBounds(bounds,{...mapPadding(),maxZoom:16,animate:false});
+}
+function fitRequestedRecord() {
+  if (!map || !focusRecordId || selectedData?.record.id !== focusRecordId) return;
+  focusRecordId = '';
+  fitSelectedGeometry();
+}
+function focusRecordMap() {
+  showMap();
+  fitSelectedGeometry();
 }
 function restoreMap() {
   if (!map) return;
   restoringMap = true;
   map.invalidateSize({pan:false}); map.setView([state.lat,state.lng],state.zoom,{animate:false});
   restoringMap = false;
+  drawFeatures();
+}
+function chooseArea(areaId, {bounds} = {}) {
+  initialMapFit = false;
+  panels.setNav(false);
+  filter({area:areaId});
+  if (bounds?.isValid()) map.fitBounds(bounds,{...mapPadding(),maxZoom:areaId ? 16 : 12,animate:false});
+  drawFeatures();
+}
+async function loadGeography() {
+  geographyLoading = true;
+  try {
+    geographyData = await atlas.getGeography();
+    geography.setData(geographyData); geographyReady = true;
+    $('geography-status').hidden = true;
+    if (state.area && !geography.getArea(state.area)) {
+      state.area = ''; syncHistory(true);
+      $('announce').textContent = 'Dieses Gebiet ist nicht vorhanden. Es werden alle Vorgänge angezeigt.';
+    }
+    if (initialMapFit) {
+      initialMapFit = false;
+      const bounds = geography.getBounds(state.area);
+      if (bounds?.isValid()) map.fitBounds(bounds,{...mapPadding(),maxZoom:state.area ? 16 : 12,animate:false});
+    }
+    renderStatus();
+  } catch (error) {
+    geographyReady = false;
+    $('geography-status').hidden = false;
+    $('geography-status').replaceChildren(node('span','Gebietsübersicht nicht verfügbar. '),button('Gebiete erneut laden',loadGeography,'link-btn'),button('Gesamtsuche',() => chooseArea(''),'link-btn'));
+    $('geography-status').title = error.message;
+  } finally {
+    geographyLoading = false; lastQuery = null; render(); drawFeatures();
+  }
 }
 async function startMap() {
   try {
     if (!map) {
-      map = L.map('map',{preferCanvas:true,minZoom:2,maxZoom:19,worldCopyJump:true,zoomControl:false}).setView([state.lat,state.lng],state.zoom);
+      map = L.map('map',{preferCanvas:true,zoomAnimation:false,minZoom:2,maxZoom:19,worldCopyJump:true,zoomControl:false}).setView([state.lat,state.lng],state.zoom);
+      map.attributionControl.setPrefix('<a href="https://bonn.ratsatlas.de/" target="_blank" rel="noopener">Ratsatlas Bonn</a> · <a href="datenschutz.html">Datenschutz</a>');
+      const pane = map.createPane(selectionPane);
+      pane.style.zIndex = '410';
+      pane.style.pointerEvents = 'none';
+      geography = createMapGeography({L,map,select:$('f-area'),onSelect:chooseArea,getPadding:mapPadding});
       L.control.zoom({position:'topright'}).addTo(map);
       L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{
         attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>', maxZoom:19
       }).addTo(map);
       map.on('moveend',() => {
         if (restoringMap || !$('map').clientWidth) return;
+        initialMapFit = false;
         const center = map.getCenter().wrap();
         update({lat:+center.lat.toFixed(5),lng:+center.lng.toFixed(5),zoom:map.getZoom()},true);
+        drawFeatures();
       });
       new ResizeObserver(() => { if ($('map').clientWidth) restoreMap(); }).observe($('map'));
     }
-    await loadMapData();
-    if (selectedData?.record.id === state.record) highlightRecord(selectedData);
+    await Promise.all([loadMapData(),loadGeography()]);
+    if (!selectedLayer && selectedData?.record.id === state.record) {
+      highlightRecord(selectedData);
+      fitRequestedRecord();
+    }
   } catch (error) {
     $('map-count').replaceChildren(node('span','Karte nicht verfügbar. '),button('Erneut laden',startMap,'link-btn'));
     $('map-count').title = error.message;
@@ -308,12 +407,17 @@ async function loadMapData() {
 function renderLocations(parent,data) {
   const area = section(parent,'Ortsbezug');
   if (!data.features.length) area.append(node('p','Für diesen Vorgang ist kein Kartenort im übernommenen Bestand enthalten.','section-note'));
-  if (data.features.length) area.append(button('Auf Karte zeigen',() => focusRecordMap(data),'btn btn-secondary'));
   const list = node('ul',null,'locs');
   for (const location of data.locations) {
     const item = node('li');
-    item.append(node('strong',location.label || 'Ortsangabe'),node('p',join(location.mapped ? 'Mit Kartenort' : 'Ohne Kartenort',location.method,{title:'Beleg im Titel',document:'Beleg im Dokument'}[location.evidence?.source]),'evidence-note'));
+    const status = location.mapped ? 'Mit Kartenort' : data.features.length ? 'Im Quellpaket ohne Kartenort' : 'Ohne Kartenort';
+    item.append(node('strong',location.label || 'Ortsangabe'),node('p',join(status,location.method,{title:'Beleg im Titel',document:'Beleg im Dokument'}[location.evidence?.source]),'evidence-note'));
     evidence(item,location.evidence); list.append(item);
+    if (location.supplemental) {
+      item.append(node('p',join('Im Ratsatlas ergänzt',location.accuracy),'evidence-note'));
+      append(item,link('Quelle der Verortung ↗',location.sourceUrl));
+      if (location.attribution) item.append(node('p',location.attribution,'evidence-note'));
+    }
   }
   if (list.children.length) area.append(list);
   if (data.features.length) {
@@ -380,6 +484,7 @@ async function renderRecord() {
     selectedData = data;
     const record = data.record, title = node('h3',record.title || record.id); title.tabIndex = -1; title.id = 'detail-title';
     body.replaceChildren(badge(record.level),title);
+    if (data.features.length) body.append(button('Auf Karte zeigen',focusRecordMap,'btn btn-secondary'));
     const facts = node('dl',null,'facts');
     for (const [label,value] of [['Drucksache',record.number],['Art',record.type],['Datum',date(record.date) || 'Ohne Datum'],['Herausgeber',record.sourceContext?.publisher],['Gremium',record.gremium]]) {
       if (value) facts.append(node('dt',label),node('dd',value));
@@ -398,7 +503,7 @@ async function renderRecord() {
     sourceDetails.append(sourceBody); source.append(sourceDetails);
     renderEvents(body,data); renderLocations(body,data); renderRelations(body,data);
     const back = node('p',null,'back-home'); back.append(button('← Zurück zu „Los geht’s“',goHome,'link-btn')); body.append(back);
-    timeline.select(data); highlightRecord(data);
+    timeline.select(data); highlightRecord(data); fitRequestedRecord(); drawFeatures();
     document.title = `${record.number || record.title} – Ratsatlas Hannover`;
     $('announce').textContent = `Vorgang ${record.number || ''} geöffnet: ${record.title || record.id}`;
     if (!$('panel-detail').hidden && document.activeElement === $('detail-heading')) title.focus({preventScroll:true});
@@ -416,6 +521,25 @@ function renderStatus() {
   const totals = node('section'); totals.append(node('h3','Bestand nach Ebene')); body.append(totals);
   for (const level of LEVELS) if (levelCounts[level]) totals.append(node('p',`${labels[level]} · ${format(levelCounts[level].records)} Vorgänge · ${format(levelCounts[level].mapped)} mit Kartenort`));
   totals.append(node('p',`${format(recordCount - mappedRecordCount)} Vorgänge ohne Kartenort sind über die Liste recherchierbar.`));
+  if (manifest.enrichment) {
+    const additions = section(body,'Ergänzte Kartenorte');
+    const {originalMappedRecordCount,addedRecordCount} = manifest.enrichment.totals;
+    additions.append(node('p',`${format(originalMappedRecordCount)} Vorgänge hatten bereits einen Kartenort im Quellpaket. ${format(addedRecordCount)} weitere Vorgänge wurden anhand belegter Projektstandorte, amtlicher Hauskoordinaten oder Straßenachsen verortet.`));
+    additions.append(node('p','Genauigkeit und Beleg stehen am jeweiligen Ortsbezug. Eine Straßenachse zeigt den Straßenverlauf, ein Projektpunkt den belegten Standort; daraus wird keine Grundstücksgrenze abgeleitet. Die Originaldaten bleiben erhalten.'));
+    for (const source of manifest.enrichment.sources) {
+      const credit = node('p'); append(credit,link(source.label,source.url));
+      if (source.licenseUrl) append(credit,node('span',' · '),link('Lizenz',source.licenseUrl));
+      additions.append(credit);
+    }
+  }
+  if (geographyData) {
+    const areas = section(body,'Stadtbezirke und Stadtteile');
+    areas.append(node('p','Die Gebietsfilter verwenden die amtlichen Grenzen. Gezählt werden passende Vorgänge mit mindestens einem Kartenort im Gebiet. Ein Vorgang kann mehrere Gebiete berühren; die Gebietszahlen sind deshalb nicht additiv.'));
+    for (const source of geographyData.sources || []) {
+      areas.append(node('p',source.attribution));
+      append(areas,link(source.dataset || 'Amtliche Gebietsgrenzen',source.url),link('Lizenz',source.licenseUrl));
+    }
+  }
   const sources = node('section'); sources.append(node('h3','Amtliche Quellen')); body.append(sources);
   for (const source of manifest.sourceStatuses || []) {
     const details = node('details'); details.append(node('summary',source.source + ' · ' + format(source.recordCount) + ' Vorgänge'),node('p',join(source.retrievedAt && 'Abgerufen ' + date(source.retrievedAt),source.from && 'Zeitraum ' + date(source.from) + ' bis ' + (date(source.to) || 'offen')),'hint'),node('p',source.message));
@@ -466,7 +590,7 @@ document.addEventListener('click',event => {
   if (event.target.closest('[data-open-status]')) showStatusDialog();
 });
 window.addEventListener('popstate',() => {
-  clearPendingQuery(); state = readState(location.href); render(); restoreMap();
+  clearPendingQuery(); focusRecordId = ''; state = readState(location.href); render(); restoreMap();
 });
 showIntro(); render();
 try {

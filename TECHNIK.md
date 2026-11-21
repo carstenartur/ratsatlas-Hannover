@@ -24,6 +24,10 @@ keinen Anwendungsserver, keine Datenbank im Betrieb und keinen API-Schlüssel.
 | `site/vendor/leaflet/` | Leaflet 1.9.4 samt Bildern und Lizenz, lokal ausgeliefert |
 | `data/hannover-snapshot.tar.gz.part*`, `data/hannover-snapshot.parts.json`, `data/hannover-snapshot.sha256` | Versioniertes vollständiges Archiv in vier überprüfbaren Teilen |
 | `site/data/ris/` | Entpacktes Quellpaket, abgeleitete Such- und Kartendateien, Importnachweis |
+| `site/data/enriched/` | Reproduzierbare kombinierte Such- und Kartendaten, ergänzte Ortsbelege und Gebietszählungen |
+| `data/geocoding/`, `scripts/enrich_locations.py` | Versioniertes LGLN-Ortsverzeichnis und städtischer Projektmarker, ergänzende Verortung und Offlineprüfung |
+| `data/geography/`, `scripts/build_geography.py`, `requirements-geo.txt` | Amtliche SKH5-Flächen, Shapely und Zuordnung der Kartenorte zu Bezirken und Stadtteilen |
+| `site/map-geography.js` | Bonner Gebietsnavigation für Hannover mit Flächenfarben, Beschriftung, Legende und Auswahl |
 | `scripts/snapshot_bundle.py` | Archiv packen und für lokale Nutzung oder Deployment entpacken |
 | `scripts/import_unfallwerkbank.py` | Wiederholbare Übernahme und Offlineprüfung, Python-Standardbibliothek |
 | `tests/`, `scripts/browser_smoke.mjs` | JavaScript- und Python-Tests und Browserprüfung |
@@ -54,8 +58,8 @@ Der Importer prüft vor der Installation:
    die im Quellpaket angegebenen Datei- und Bytezählungen.
 4. Datensatz-, Geometrie- und Ebenenzählungen, eindeutige Anwendungs-IDs,
    Geometriezuordnungen und vorhandene Orts-, Ereignis- und Beziehungszählungen.
-5. Koordinaten und Bounds der übernommenen Geometrien. Es findet keine neue
-   Geokodierung oder Erzeugung von Ersatzpunkten statt.
+5. Koordinaten und Bounds der übernommenen Geometrien. Die zusätzliche städtische
+   Verortung folgt in einem eigenen Build-Schritt.
 
 Gzip-Dateien werden höchstens bis zur erlaubten entpackten Knotengröße gelesen.
 Ein neuer Stand entsteht zunächst in einem temporären Nachbarverzeichnis. Der
@@ -80,7 +84,8 @@ amtlichen RIS-Server erneut ab. Es gibt keinen geplanten oder regelmäßigen Abr
 
 ## Archiv und abgeleitete Dateien
 
-Das versionierte Archiv enthält den vollständigen auslieferbaren Bestand.
+Das versionierte Archiv enthält den vollständigen Quellimport einschließlich
+seiner ursprünglichen Such- und Kartenprojektion.
 Es liegt in vier Teilen `data/hannover-snapshot.tar.gz.part01` bis `part04`
 vor. `data/hannover-snapshot.parts.json` verzeichnet die Teile; die SHA-256-Datei
 prüft zusätzlich das gesamte Archiv. So bleiben sämtliche
@@ -120,11 +125,42 @@ prüft die Originalstruktur und vergleicht die reproduzierten Such- und
 Kartenprojektionen mit den ausgelieferten Dateien. Der Importzeitpunkt wird
 dabei nicht als neuer Quellenprüfstand ausgegeben.
 
+## Ergänzte Projektion und Gebietsdaten
+
+`scripts/enrich_locations.py` liest die geprüfte Quellsuche, die Originalkarte
+und die über das Manifest erreichbaren Ortsbeleg-Partitionen. Straßenachsen
+und Hausnummern werden mit dem per SHA-256 festgelegten LGLN-Verzeichnis
+abgeglichen. Für den Bumke-Standort verwendet der Build den städtischen
+Projektmarker und amtliche Belege für die Zuordnung zum Vorhaben. Ergebnisse und
+Grenzen der Regeln stehen in der [Datenbeschreibung](docs/DATEN.md#wie-die-ergänzten-kartenorte-entstehen).
+
+Die Ausgaben liegen in `site/data/enriched/`. Das Manifest `enrichment.json`
+bindet die Dateien an Generation und SHA-256 des ursprünglichen RIS-Manifests.
+Aus den Dateideskriptoren überprüft der Client Größe und Prüfsumme des
+entpackten Inhalts. Die Rohdaten und Archivteile gehören weiterhin zum
+separat prüfbaren Originalimport.
+
+| Datei | Aufgabe |
+|---|---|
+| `search-index.json.gz` | Alle Originalzeilen, ergänzt um belegte Ortsnamen und den entsprechenden Verortungsstatus. |
+| `map.geojson.gz` | Alle 3.395 ursprünglichen Features sowie 533 zusätzliche Features mit qualifizierten Vorgangs-IDs. |
+| `additions.json.gz` | Nach Vorgangs-ID geordnete zusätzliche Ortsbelege, Genauigkeiten und Geometrie-IDs für die Detailansicht. |
+| `geography.json.gz` | 13 Bezirke und 51 Stadtteile mit Gebietskennungen, Anzeigegeometrien, Schnittmengen und eindeutigen Vorgangs-IDs. |
+
+`scripts/build_geography.py` prüft den Stand der ergänzten Karte. Ein räumlicher
+Index und `intersects` in Shapely ordnen ihre Punkte, Linien und Flächen den
+unvereinfachten amtlichen SKH5-Grenzen zu. Je Gebiet werden die Vorgangs-IDs
+dedupliziert. Die Darstellungsflächen werden separat vereinfacht. Die Gebietsdatei
+enthält neben der Quellgeneration die SHA-256 der ergänzten Kartenprojektion.
+[Gebietsgrenzen und Datenstand](data/geography/source.json)
+
 ## Suche, Zeitleiste und Details
 
 `AtlasData` in `site/data.js` bietet `init()`, `search(params)`,
 `getRecord(id)` und `getMap()`. Der Suchworker durchsucht den vollständigen
-Index nach Suchbegriffen, Quellenebenen und Verortung. Aus diesen Treffern
+Index nach Suchbegriffen, Quellenebenen und Verortung. Bei einem gewählten
+Gebiet schränkt die Menge seiner Vorgangs-IDs die Suche vor Datumsverteilung
+und Paginierung ein. Aus diesen Treffern
 berechnet er Tageszählungen, Monatszählungen nach Quellenebene und die Zahl
 der undatierten Treffer. Anschließend wendet er die Datums- oder Jahresgrenzen
 an. Diese Grenzen wirken auf Liste und Karte. Die Liste zeigt eine Seite der
@@ -143,13 +179,24 @@ Die Anwendung liest Details bei Bedarf aus den unveränderten Bäumen. Vor der
 Verwendung werden gzip-komprimierte Inhalte entpackt und ihre SHA-256-Prüfsummen
 kontrolliert. Die Vorgangsansicht zeigt Originalverweise, Ortsbelege,
 überlieferte Ereignisse und dokumentierte Beziehungen. Interne Links verwenden
-quellenqualifizierte IDs. Die Karte zeichnet die vorhandenen Originalgeometrien.
+quellenqualifizierte IDs. Ergänzte Geometrien und Nachweise werden aus den
+geprüften Projektionen anhand derselben Vorgangs-ID dazugeladen.
+
+Die Karte startet mit grauem OSM-Hintergrund und den 13 Bezirken. Die Auswahl
+eines Bezirks zeigt die zugehörigen Stadtteile, die Auswahl eines Stadtteils
+seine Kartenorte. Auch beim freien Hineinzoomen sind ab Zoomstufe 14 die
+Ortsgeometrien zugänglich. Die Auswahl über Liste oder Vorgangsverknüpfung
+passt den Ausschnitt an alle Geometrien des Vorgangs und die geöffneten
+Fenster an. Die orange Hervorhebung hat eine dunkle Kontur. Bei einer Auswahl
+über die Karte, einem ausdrücklich geteilten Ausschnitt und der Wiederherstellung
+über den Browserverlauf bleibt die jeweilige Kameraposition maßgeblich.
 
 ## Ansichtszustand und URLs
 
 | Parameter | Inhalt |
 |---|---|
 | `q`, `ebenen`, `verortet`, `seite` | Suchtext, Quellenebenen, Verortung und Ergebnisseite |
+| `gebiet` | Optionaler Gebietsschlüssel, beispielsweise `bezirk:13` oder `stadtteil:18`. |
 | `von`, `bis` | Datumsgrenzen im Format `JJJJ-MM-TT` oder vierstellige Jahre aus bestehenden Links |
 | `vorgang` | Quellenqualifizierte ID des ausgewählten Vorgangs |
 | `lat`, `lng`, `z` | Kartenmittelpunkt und Zoom |
@@ -165,10 +212,13 @@ auch den Hostinganbieter.
 
 Benötigt werden ein aktueller Browser mit ES-Modulen, Web Workers,
 DecompressionStream, Web Crypto und Dialogunterstützung sowie JavaScript.
-Bei lokaler Entwicklung genügt nach dem Entpacken ein HTTP-Server auf localhost:
+Lokal werden die beiden Projektionen vor dem Start des HTTP-Servers gebaut.
 
 ~~~bash
+python3 -m pip install -r requirements-geo.txt
 python3 scripts/snapshot_bundle.py unpack
+python3 scripts/enrich_locations.py --source-dir site/data/ris --output-dir site/data/enriched
+python3 scripts/build_geography.py --data-dir site/data/enriched
 python3 -m http.server --directory site 8000
 ~~~
 
@@ -199,7 +249,8 @@ Hosting bestimmt; die alte Apache-.htaccess wird dort nicht ausgewertet.
 
 Ziel ist die Projektadresse
 [https://carstenartur.github.io/ratsatlas-Hannover/](https://carstenartur.github.io/ratsatlas-Hannover/).
-Die normalen Asset- und Datenpfade sind relativ. Die 404-Seite benutzt dagegen
+Die normalen Asset- und Datenpfade sind relativ. Anwendungsdateien, Module und
+Worker verwenden gemeinsam `v=kartenorte-20261121-3`. Die 404-Seite benutzt dagegen
 den bekannten Projektwurzelpfad /ratsatlas-Hannover/, damit sie auch bei
 fehlerhaften verschachtelten Adressen ihre Gestaltung und Startseite findet.
 Canonical, Sitemap und robots.txt beziehen sich auf die Projektadresse.
@@ -208,8 +259,8 @@ Der einzige aktive Workflow heißt **Prüfen und veröffentlichen**:
 
 | Ereignis | Ergebnis |
 |---|---|
-| Pull Request nach `main` | Archiv entpacken, JavaScript- und Python-Tests, vollständige Offlineprüfung und Browserprüfungen in Chromium und WebKit |
-| Push auf `main` | Dieselben Prüfungen. Der Deploymentjob entpackt anschließend das Archiv und liefert `site/` mit MIT-Lizenz und Herkunftshinweisen an GitHub Pages aus. |
+| Pull Request nach `main` | Quellarchiv entpacken, ergänzte Orts- und Gebietsdaten aufbauen, JavaScript- und Python-Tests, vollständige Offlineprüfung und Browserprüfungen in Chromium und WebKit |
+| Push auf `main` | Dieselben Prüfungen. Für das Deployment werden das Archiv entpackt und die ergänzten Orts- und Gebietsdaten gebaut. Der Job liefert `site/` mit MIT-Lizenz und Herkunftshinweisen an GitHub Pages aus. |
 
 Die Prüfmaschine verwendet Node.js 24 und Python 3.12. Die Browserprüfung
 verwendet Playwright und speichert die Berichte und Bildschirmbilder im
@@ -225,7 +276,11 @@ die tatsächlich erreichbare Projektadresse nach der Zusammenführung.
 ## Prüfungen und Grenzen
 
 ~~~bash
+python3 -m pip install -r requirements-geo.txt
 python3 scripts/snapshot_bundle.py unpack
+python3 scripts/enrich_locations.py --source-dir site/data/ris --output-dir site/data/enriched
+python3 scripts/build_geography.py --data-dir site/data/enriched
+python3 scripts/enrich_locations.py --check --source-dir site/data/ris --output-dir site/data/enriched
 npm test
 python3 -m unittest discover -s tests -p 'test_*.py'
 python3 scripts/import_unfallwerkbank.py --check --output-dir site/data/ris

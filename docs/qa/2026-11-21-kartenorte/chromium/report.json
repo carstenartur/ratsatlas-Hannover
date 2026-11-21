@@ -1,0 +1,122 @@
+{
+  "engine": "chromium",
+  "basePath": "/ratsatlas-Hannover/",
+  "assertions": [
+    "Rendered desktop basemap pixels are grayscale in the unobstructed tile sample",
+    "Bonn fullviewport layout, gray map with 13 districts, 109605 records and 3928 supplied geometries",
+    "District and neighborhood picker use generated counts; the reset overview accepts district pointer clicks and leaving a selected record restores neighborhoods",
+    "Browser Back and Forward restore distinct linked request/answer selections",
+    "Rapid query/filter changes and clickable request/answer relationship preserve qualified identity",
+    "Clicking a mapped result immediately after using a zoom control focuses its point; reselecting it restores the highlighted view",
+    "Street evidence, clickable original point under highlight, filtered popup removal and shared selection",
+    "List selection automatically focuses and paints the original LineString, which remains clickable: hannover-sim:15-0071-2025",
+    "List selection automatically focuses and paints the original Polygon, which remains clickable: hannover-sim:15-1035-2016",
+    "A mapped record permalink without coordinates focuses its original point",
+    "Explicit record viewport is preserved and distinct saved cameras survive browser Back and Forward",
+    "Bumke finds 19 mapped records; choosing 2235/2024 focuses its municipal project location and displays its source",
+    "Previously published map/record and query-only links restore the selected answer or results",
+    "A slow record response preserves focus after the user returns to search",
+    "Same number 0098/2004 opens distinct Stadt and Region records without collisions",
+    "All 15 unlocated Landtag records retain their original identity and shared source filter",
+    "Real Bonn timeline filters and shares ISO dates; reset restores all 16 undated records",
+    "Mobile attribution includes Bonn and privacy links between the map status and navigation",
+    "Phone list, unobstructed map and timeline are explicitly selected, painted and captured as distinct views",
+    "Tablet/phone have one collapsible sheet, accessible full map and honest source totals",
+    "Browser and search worker load one consistently versioned runtime, independent of old unversioned cache entries"
+  ],
+  "screenshots": [
+    "desktop.png",
+    "neighborhoods.png",
+    "places.png",
+    "request-answer.png",
+    "location-evidence.png",
+    "geometry-line.png",
+    "geometry-polygon.png",
+    "bumke.png",
+    "timeline.png",
+    "tablet.png",
+    "mobile-list.png",
+    "mobile-map.png",
+    "mobile-timeline.png",
+    "sources.png"
+  ],
+  "pageErrors": [],
+  "consoleErrors": [],
+  "requestFailures": [
+    {
+      "url": "https://tile.openstreetmap.org/15/17268/10765.png",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "url": "https://tile.openstreetmap.org/15/17267/10766.png",
+      "error": "net::ERR_ABORTED"
+    }
+  ],
+  "assetErrors": [],
+  "interactions": [
+    {
+      "name": "timeline-loading",
+      "passed": true
+    },
+    {
+      "name": "late-detail-focus",
+      "passed": true
+    },
+    {
+      "name": "immediate-preset-share",
+      "passed": true
+    },
+    {
+      "name": "mobile-timeline-reset",
+      "passed": true
+    },
+    {
+      "name": "resized-timeline",
+      "passed": true
+    }
+  ],
+  "grayscaleSample": {
+    "clip": {
+      "x": 20,
+      "y": 90,
+      "width": 180,
+      "height": 100
+    },
+    "coloredFraction": 0
+  },
+  "runtimeAssets": {
+    "style.css": [
+      "kartenorte-20261121-3"
+    ],
+    "hannover.css": [
+      "kartenorte-20261121-3"
+    ],
+    "app.js": [
+      "kartenorte-20261121-3"
+    ],
+    "data.js": [
+      "kartenorte-20261121-3"
+    ],
+    "view-state.js": [
+      "kartenorte-20261121-3"
+    ],
+    "bonn-panels.js": [
+      "kartenorte-20261121-3"
+    ],
+    "timeline-adapter.js": [
+      "kartenorte-20261121-3"
+    ],
+    "map-geography.js": [
+      "kartenorte-20261121-3"
+    ],
+    "search.js": [
+      "kartenorte-20261121-3"
+    ],
+    "timeline.js": [
+      "kartenorte-20261121-3"
+    ],
+    "search-worker.js": [
+      "kartenorte-20261121-3"
+    ]
+  }
+}
