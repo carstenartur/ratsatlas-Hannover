@@ -1,0 +1,51 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { SearchIndex, normalize } from '../site/search.js';
+
+const rows = [
+  { id: 'hannover-sim:1047-2026', title: 'Radwege in Döhren-Wülfel', number: '1047/2026', date: '2026-05-12', level: 'city', body: 'Stadtbezirksrat Döhren-Wülfel', mapped: true, locations: ['Gustav-Adolf-Straße 12'] },
+  { id: 'hannover-sim:1047-2026F1', title: 'Antwort zu Radwegen', number: '1047/2026 F1', date: '2026-05-18', level: 'city', body: 'Stadtbezirksrat Döhren-Wülfel', mapped: false, locations: [] },
+  { id: 'region-hannover-ris:1047-2026', title: 'Radwege im Umland', number: '1047/2026', date: '2026-04-01', level: 'region', body: 'Verkehrsausschuss', mapped: false, locations: [] },
+  { id: 'niedersachsen-landtag:abcdef', title: 'Förderung des Radverkehrs', number: '19/1234', date: '2024-03-01', level: 'state', body: 'Landtag', mapped: false, locations: [] },
+  { id: 'hannover-sim:undated', title: 'Öffentliche Sitzung', date: null, level: 'city', mapped: false, locations: [] }
+];
+
+test('normalizes German diacritics, ß and punctuation for street and body searches', () => {
+  assert.equal(normalize('DÖHREN–Wülfel / Straße'), 'dohren wulfel strasse');
+  const index = new SearchIndex(rows);
+  assert.equal(index.search({ query: 'gustav adolf strasse 12' }).total, 1);
+  assert.equal(index.search({ query: 'dohren wulfel' }).total, 2);
+});
+
+test('all records including unlocated records remain searchable and source-separated', () => {
+  const index = new SearchIndex(rows);
+  assert.equal(index.search({}).total, 5);
+  const found = index.search({ query: '1047/2026' });
+  assert.equal(found.total, 3);
+  assert.equal(new Set(found.items.map(r => r.id)).size, 3);
+  assert.equal(index.search({ levels: ['state'] }).items[0].id, 'niedersachsen-landtag:abcdef');
+  assert.equal(index.search({ levels: [] }).total, 0);
+});
+
+test('combines source, date and mapped filters without confusing mentions with locations', () => {
+  const index = new SearchIndex(rows);
+  assert.deepEqual(index.search({ query: 'rad', levels: ['city'], yearFrom: 2026, yearTo: 2026, mappedOnly: true }).items.map(r => r.id), ['hannover-sim:1047-2026']);
+  assert.equal(index.search({ yearFrom: 2025 }).total, 3);
+  assert.equal(index.search({ yearFrom: 2027, yearTo: 2026 }).total, 0);
+});
+
+test('paginates in descending date order without dropping equal numbers or undated records', () => {
+  const index = new SearchIndex(rows);
+  const first = index.search({ limit: 2 });
+  const second = index.search({ limit: 2, offset: 2 });
+  assert.deepEqual(first.items.map(r => r.id), ['hannover-sim:1047-2026F1', 'hannover-sim:1047-2026']);
+  assert.equal(second.items.length, 2);
+  assert.equal(index.search({ offset: 4 }).items[0].id, 'hannover-sim:undated');
+  assert.equal(first.matchedIds.length, 5);
+});
+
+test('query syntax is plain text and is never evaluated as a regular expression', () => {
+  const index = new SearchIndex(rows);
+  assert.doesNotThrow(() => index.search({ query: '[.*+' }));
+  assert.equal(index.search({ query: 'radwege im umland' }).total, 1);
+});

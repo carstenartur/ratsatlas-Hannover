@@ -3,32 +3,33 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'none'">
-  <title>Seite nicht gefunden – Ratsatlas</title>
   <meta name="robots" content="noindex">
-  <!-- Ausnahme von den relativen Pfaden: Der Server liefert diese Seite unter beliebigen Pfaden aus.
-       Stile und Bilder wurzelrelativ (/…), damit sie auf ratsatlas.de in jeder Tiefe laden;
-       auf der Ausweichadresse daimpad.github.io/ratsatlas erscheint die Seite ohne Gestaltung, bleibt aber lesbar. -->
-  <link rel="icon" href="/favicon.svg?v=2" type="image/svg+xml">
-  <link rel="stylesheet" href="/tokens.css">
-  <link rel="stylesheet" href="/style.css">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'none'; style-src 'self'; font-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'none'">
+  <title>Seite nicht gefunden – Ratsatlas Hannover</title>
+  <meta name="theme-color" content="#7c3aed">
+  <!-- Projektwurzel: Diese Fehlerseite kann unter beliebig tiefen Adressen erscheinen. -->
+  <link rel="icon" href="/ratsatlas-Hannover/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/ratsatlas-Hannover/tokens.css">
+  <link rel="stylesheet" href="/ratsatlas-Hannover/style.css">
 </head>
 <body>
+  <a class="sprung" href="#inhalt">Zum Inhalt</a>
   <header class="kopf">
-    <a class="marke" href="https://ratsatlas.de/"><img src="/favicon.svg?v=2" width="32" height="32" alt="">Ratsatlas</a>
+    <a class="marke" href="/ratsatlas-Hannover/"><img src="/ratsatlas-Hannover/favicon.svg" width="32" height="32" alt="">Ratsatlas Hannover</a>
   </header>
   <main class="inhalt" id="inhalt">
     <div class="page glass">
       <h1>Diese Seite gibt es nicht</h1>
-      <p>Die Adresse ist vielleicht veraltet oder unvollständig. Die Städte des Ratsatlas finden Sie auf der Startseite.</p>
-      <a class="knopf" href="https://ratsatlas.de/">Zur Startseite</a>
+      <p class="lead">Die Adresse ist möglicherweise unvollständig oder veraltet.</p>
+      <p>Öffnen Sie die Recherche, um Vorgänge aus Stadt, Region und Land zu finden. Suchergebnisse und einzelne Vorgänge können Sie dort mit „Ansicht teilen“ verlinken.</p>
+      <a class="knopf" href="/ratsatlas-Hannover/">Zur Recherche</a>
     </div>
   </main>
   <footer class="fuss">
     <ul>
-      <li><a href="https://nozilla.de/impressum/" target="_blank" rel="noopener">Impressum</a></li>
-      <li><a href="https://ratsatlas.de/datenschutz.html">Datenschutz</a></li>
-      <li><a href="https://github.com/daimpad/ratsatlas" target="_blank" rel="noopener">Quellcode</a></li>
+      <li><a href="/ratsatlas-Hannover/datenschutz.html">Datenschutz</a></li>
+      <li><a href="https://github.com/carstenartur/ratsatlas-Hannover" target="_blank" rel="noopener noreferrer">Quellcode und Kontakt</a></li>
     </ul>
   </footer>
 </body>

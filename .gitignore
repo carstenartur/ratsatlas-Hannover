@@ -1,3 +1,8 @@
 __pycache__/
 *.zip
 .DS_Store
+node_modules/
+site/data/ris/
+data/hannover-snapshot.tar.gz
+browser-report/
+.superpowers/

@@ -1,143 +1,214 @@
-# Technik
+# Ratsatlas Hannover – Technik
 
-[← Zurück zur Übersicht](README.md)
+[Zur Übersicht](README.md) · [Datenherkunft](docs/DATEN.md) · [Lizenzen](NOTICE.md)
 
-- [Aufbau](#aufbau)
-- [Gestaltung](#gestaltung)
-- [Kacheln aus der Städteliste](#kacheln-aus-der-städteliste)
-- [Sicherheit und Datenschutz](#sicherheit-und-datenschutz)
-- [Workflows](#workflows)
-- [Deployment](#deployment)
-- [Prüfung](#prüfung)
-- [Lokal ansehen](#lokal-ansehen)
+Die Anwendung liefert statische Dateien aus site/ aus. Ein Python-Importer
+übernimmt das veröffentlichte Hannover-RIS-Paket der Unfallwerkbank. Suche,
+Filter, Karte und Detailansicht arbeiten anschließend im Browser. Es gibt
+keinen Anwendungsserver, keine Datenbank im Betrieb und keinen API-Schlüssel.
 
-## Aufbau
+## Dateien und Zuständigkeiten
 
-```
-ratsatlas/
-├── site/                  ausgelieferte Dateien (relativ verlinkt)
-│   ├── index.html         Startseite; Kacheln und JSON-LD aus staedte.json
-│   ├── datenschutz.html
-│   ├── 404.html           wurzelrelative Pfade, weil unter beliebigen Adressen ausgeliefert
-│   ├── tokens.css         gemeinsame Gestaltungsgrößen des Kerns
-│   ├── style.css          Seitenlayout, Kacheln, Textseiten
-│   ├── fonts/             Inter (variabel, woff2) mit Lizenzdatei
-│   ├── vorschau/          Vorschaubilder der Kacheln
-│   ├── partner/           Logo Offene Kommunen.NRW (Farben als Attribute, wegen CSP)
-│   └── …                  Favicons, App-Symbole, site.webmanifest, robots.txt, sitemap.xml
-├── staedte.json           Städteliste
-├── scripts/
-│   ├── kacheln.py         schreibt Kacheln und JSON-LD; --pruefen für CI
-│   ├── sitemap.py         schreibt sitemap.xml mit lastmod aus der Git-Historie (im Workflow)
-│   ├── og_bild.py         erzeugt site/og-image.png aus og-bild.html (von Hand, Playwright)
-│   ├── indexnow.py        meldet geänderte Seiten an IndexNow (im Workflow nach dem Deploy)
-│   └── live_pruefen.sh    prüft die ausgelieferte Seite
-├── deploy/
-│   ├── htaccess           wird im Branch deploy zu .htaccess
-│   ├── nginx-zusatz.conf  Alternative, falls nginx die .htaccess umgeht
-│   └── CHECKLISTE.md      Einrichtung in Plesk, DNS und GitHub
-├── pruefung.tsv           Prüfprotokoll
-├── pruefung/              Bildschirmfotos der Prüfung
-└── .github/workflows/     pruefen.yml, veroeffentlichen.yml, live.yml
-```
-
-Die Pfade in `site/` sind durchgehend relativ, damit dieselben Dateien unter `ratsatlas.de/` und unter `daimpad.github.io/ratsatlas/` funktionieren. Einzige Ausnahme ist `404.html`.
-
-## Gestaltung
-
-Die Gestaltung stammt aus der RIS-Karte Bonn ([allris-test](https://github.com/daimpad/allris-test), `site/style.css` und `site/page.css`), kopiert und nicht verlinkt. `site/tokens.css` fasst die gemeinsamen Größen zusammen und ist die maßgebliche Quelle für die Stadtinstanzen:
-
-| Größe | Wert | Verwendung |
-|---|---|---|
-| `--bg` + `--bg-gradient` | `#fafaff`, drei radiale Verläufe (rosa, hellblau, lavendel) | Seitenhintergrund |
-| `--surface-strong` | `rgba(255,255,255,0.85)`, `blur(20px) saturate(160%)` | Glasflächen; Fallback ohne `backdrop-filter` |
-| `--text` / `--text-muted` | `#0f0f14` / `#5a5a68` | Text |
-| `--accent-ink` / `--accent-fill` | `#6d28d9` / `#7c3aed` | Links, Wortmarke, Fokusrahmen (statt `#8b5cf6`, wegen WCAG-AA-Kontrast) |
-| `--cta` | Verlauf `#7c3aed → #5b21b6`, 135° | Schaltflächen |
-| `--ok` / `--warn` | `#1f7a4d` / `#9a5200` | Status „Online“ / Banderole „Im Aufbau“ |
-
-Maßsystem in `tokens.css`: Schriftskala mit sieben Stufen (`--text-xs` bis `--text-3xl`), Abstände im 4-px-Raster (`--space-1` bis `--space-8`), Radien (`--radius-s`, `--radius`, `--radius-pill`), Mindestgröße für Bedienflächen `--tap` (44 px); `style.css` verwendet nur diese Werte. Mobile First: Grundregeln für das Telefon, Erweiterungen ab 720 px (Tablet: Karten der Mitwirkung und Grundsätze zweispaltig, Stadt-Kachel waagerecht) und 1000 px (Desktop: Stadt-Grafik neben dem Einstieg, Schritte als Zeitstrahl, Grundsätze in einer Reihe zu drei und einer zu zwei). Die Grundsätze tragen je ein Symbol (Inline-SVG, Strich weiß auf `--cta`, 8,98:1 bis 5,7:1) und einen Kernsatz in `--accent-ink`. Auf dem Telefon ist die Sprungleiste einzeilig und waagerecht scrollbar. Nur helles Farbschema (`color-scheme: light`), Schrift Inter mit `font-display: swap`. Bei `prefers-reduced-motion` entfallen Anhebung und Pfeilbewegung.
-
-## Kacheln aus der Städteliste
-
-`scripts/kacheln.py` (nur Standardbibliothek) liest `staedte.json`, prüft Pflichtfelder, Status, `https`-Adresse und vorhandene Bilder und ersetzt in `site/index.html` den Inhalt zwischen den Markierungen `kacheln:anfang/ende` und `jsonld:anfang/ende`.
-
-- `online` → Kachel mit Bild, Angaben und Knopf „<Titel> öffnen“; der Knopf ist der einzige Link und deckt die ganze Kachel ab (`.kachel-knopf::after`)
-- `im Aufbau` → Instanz erreichbar, Datenbestand wächst noch: kleinere Kachel wie bei `in Vorbereitung`, aber mit Bildschirmfoto der Instanz (`site/vorschau/<id>.jpg`, 1200 × 630, aus 1440 × 756 px verkleinert), Chip „Bestand im Aufbau“ neben dem Titel und Knopf „<Titel> öffnen“, der die ganze Kachel abdeckt; nicht in `hasPart` des JSON-LD
-- `in Vorbereitung` → kleinere Kachel ohne Link, ab 720 px je halbe Breite, mit der Banderole „Im Aufbau“ oben rechts; die Banderole ist Text hinter der Überschrift (Vorleseprogramme lesen erst den Namen, dann den Status), Kontrast weiß auf `--warn` 5,9:1
-- JSON-LD `WebSite` mit `hasPart` nur für Städte mit Status `online`
-
-`python3 scripts/kacheln.py --pruefen` endet mit Fehlercode 1, wenn das HTML nicht zur Liste passt. Es prüft außerdem in `index.html`, `datenschutz.html` und `404.html`, dass Links auf andere Seiten (andere Domains und Stadt-Subdomains) mit `target="_blank" rel="noopener"` in einem neuen Tab öffnen; Sprunglinks, eigene Seiten von ratsatlas.de und `mailto:` bleiben im selben Tab.
-
-## Sicherheit und Datenschutz
-
-Content-Security-Policy, als `<meta>` in jeder Seite und als Kopfzeile aus `.htaccess` (dort zusätzlich `frame-ancestors 'none'`):
-
-```
-default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data:;
-object-src 'none'; base-uri 'self'; form-action 'none'
-```
-
-Weitere Kopfzeilen aus `deploy/htaccess`: `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy` (Kamera, Mikrofon, Standort, Zahlung, USB, Topics aus), `Strict-Transport-Security: max-age=31536000` (ohne `includeSubDomains`, weil die Subdomains eigenständig betrieben werden). Dazu Weiterleitung `www` → `ratsatlas.de`, Caching für Schrift und Bilder, `ErrorDocument 404`, `.git` gesperrt.
-
-Keine Cookies, kein lokaler Speicher, keine Anfragen an fremde Server. Die Datenschutzerklärung steht unter [`site/datenschutz.html`](site/datenschutz.html).
-
-## Workflows
-
-| Datei | Auslöser | Jobs |
-|---|---|---|
-| `pruefen.yml` | Pull Request | `kacheln`: `scripts/kacheln.py --pruefen` |
-| `veroeffentlichen.yml` | Push auf `main`, manuell | `pruefen` → `deploy` (Sitemap mit `lastmod`, neuer Commit auf dem Branch `deploy`, mit `.htaccess` und `version.txt`) und `pages` (GitHub Pages aus `site/`, ohne `.htaccess`, jede Seite mit `noindex`) |
-| `live.yml` | manuell | `scripts/live_pruefen.sh https://ratsatlas.de` (auch: Stand von `version.txt` = Branch `deploy`), Ergebnis in der Zusammenfassung des Laufs |
-
-Alle Actions sind auf Commit-Hashes festgelegt; Schreibrechte gelten nur in den Jobs, die sie brauchen.
-
-## Suchmaschinen
-
-- Eine Adresse je Seite: `/index.html` leitet mit 301 auf `/` (`.htaccess`), `www` auf `ratsatlas.de`; Canonical in jeder Seite.
-- Die Ausweichadresse auf GitHub Pages trägt `noindex` (gesetzt im Workflow), damit sie nicht mit ratsatlas.de konkurriert.
-- `sitemap.xml` mit `lastmod` je Seite, erzeugt von `scripts/sitemap.py` im Workflow; `robots.txt` verweist darauf.
-- Vorschau für geteilte Links: `og-image.png` (1200 × 630), Twitter-Karte `summary_large_image`.
-- IndexNow (Bing, über Bing auch DuckDuckGo und Ecosia; nicht Google): Schlüsseldatei `site/<schlüssel>.txt`; der Workflow meldet nach jedem neuen Stand von `deploy` die geänderten HTML-Seiten, sobald `version.txt` auf ratsatlas.de den Stand zeigt. Fehler bei IndexNow sind Warnungen.
-- Links von der Stadt-Kachel auf Themenseiten der Instanz (`themen` in `staedte.json`) führen Suchmaschinen und Lesende direkt zu den inhaltsreichen Seiten.
-- JSON-LD `WebSite` mit `publisher` (Damian Paderta), `sponsor` (Offene Kommunen.NRW), `about` und `hasPart` (Städte mit Status `online`).
-- Keine Reichweitenmessung; Auswertung über Google Search Console (Domain-Eigenschaft) und Bing Webmaster Tools.
-
-## Deployment
-
-```
-main ──► Seite veröffentlichen ──► Branch deploy ──(Webhook)──► Plesk-Git ──► httpdocs ──► ratsatlas.de
-                              └──► GitHub Pages ─────────────────────────────────────────► daimpad.github.io/ratsatlas
-```
-
-Einrichtung Schritt für Schritt: [`deploy/CHECKLISTE.md`](deploy/CHECKLISTE.md). Befunde vom 04.11.2026:
-
-- In Plesk muss **„Intelligente Bearbeitung statischer Dateien“** aus sein (Proxymodus bleibt an). Sonst liefert nginx die Dateien selbst aus, und Kopfzeilen wie Weiterleitungen aus `.htaccess` fehlen bei GET – HEAD-Anfragen zeigen sie trotzdem. Daher prüft `live_pruefen.sh` mit GET.
-- „Bevorzugte Domain“ ist in Plesk nicht wählbar; die Weiterleitung von `www` steht deshalb in `.htaccess`.
-- Der Webhook-Abruf von Plesk übernimmt nur Stände, die an den vorhandenen anschließen: Bei einem ohne Historie neu geschriebenen Branch (Force-Push) antwortete Plesk mit 204, rief aber nicht ab. `deploy` wird deshalb fortlaufend geschrieben. Nur „Jetzt Pull ausführen“ von Hand übernimmt auch unverbundene Stände.
-- `version.txt` enthält den Commit von `main`; die Live-Prüfung vergleicht `https://ratsatlas.de/version.txt` mit dem Branch `deploy` und meldet einen nicht abgeholten Stand.
-- Nur ein Workflow darf an GitHub Pages ausliefern; die GitHub-Vorlage „Static HTML“ würde das ganze Repository veröffentlichen.
-
-## Prüfung
-
-| Bereich | Werkzeug |
+| Pfad | Aufgabe |
 |---|---|
-| Barrierefreiheit | axe-core 4.10.3 über Playwright/Chromium, Regeln WCAG 2.0/2.1 A und AA und Best Practice; Kontraste nach WCAG nachgerechnet |
-| Tastatur, Fokus, reduzierte Bewegung | Playwright |
-| HTML und CSS | Nu Html Checker (vnu-jar 24.10.17) |
-| Links | lychee 0.18.1 |
-| Ausgelieferte Seite | `scripts/live_pruefen.sh` (curl mit GET, openssl) |
+| site/index.html, site/app.js, site/app.css | Rechercheoberfläche, Karte und Detaildialoge |
+| site/view-state.js | Validierung und Serialisierung des Ansichtszustands in URLs |
+| site/data.js | Geprüfter Datenzugriff, Baumabfragen und Detailnachladung |
+| site/search.js, site/search-worker.js | Suche und kombinierte Filter über den vollständigen Suchindex |
+| site/tokens.css, site/fonts/ | Übernommene Ratsatlas-Gestaltung und lokale Schrift Inter |
+| site/vendor/leaflet/ | Leaflet 1.9.4 samt Bildern und Lizenz, lokal ausgeliefert |
+| data/hannover-snapshot.tar.gz.part*, data/hannover-snapshot.parts.json, data/hannover-snapshot.sha256 | Versioniertes vollständiges Archiv in vier überprüfbaren Teilen |
+| site/data/ris/ | Entpacktes Quellpaket, abgeleitete Such- und Kartendateien, Importnachweis |
+| scripts/snapshot_bundle.py | Archiv packen und für lokale Nutzung oder Deployment entpacken |
+| scripts/import_unfallwerkbank.py | Wiederholbare Übernahme und Offlineprüfung, Python-Standardbibliothek |
+| tests/ | JavaScript- und Python-Tests |
+| .github/workflows/veroeffentlichen.yml | Ein gemeinsamer Prüf- und Pages-Workflow |
 
-Ergebnisse mit Datum in [`pruefung.tsv`](pruefung.tsv), Bildschirmfotos bei 360, 768 und 1280 px in [`pruefung/`](pruefung/).
+Die früheren Portaldateien staedte.json, scripts/kacheln.py, scripts/sitemap.py,
+scripts/indexnow.py und deploy/ sind historische Bestandteile des Forks. Sie
+gehören nicht zum Build oder Deployment dieser Stadtanwendung. Insbesondere
+darf der alte Sitemap-Generator nicht über die Hannover-Sitemap laufen. Der
+aktive Workflow ruft keinen dieser früheren Portal- oder Plesk-Schritte auf.
 
-## Lokal ansehen
+## Quellpaket und Import
 
-```bash
-python3 -m http.server 8000 --directory site
-```
+Quelle ist
+[das veröffentlichte Hannover-RIS-Paket der Unfallwerkbank](https://carstenartur.github.io/Unfallatlas/data/ris/hannover.json).
+Der Import übernimmt einen einmal gelesenen Manifeststand. Die darin genannten
+Dateien sind über SHA-256-basierte Namen adressiert. Der ursprüngliche Stand
+enthält sieben Wurzeln für records, locations, relations, search, geometry,
+links und spatial.
 
-Danach `http://localhost:8000/` öffnen. Ein Build-Schritt ist nicht nötig; nach Änderungen an `staedte.json`:
+Der Importer prüft vor der Installation:
 
-```bash
-python3 scripts/kacheln.py
-```
+1. Hannover-Schemaversion 2, das Raumindexformat und die Generation aus den
+   serialisierten Wurzeldeskriptoren.
+2. Zulässige Dateinamen, Typen, Größen, SHA-256-Prüfsummen des entpackten Inhalts,
+   Knotenzählungen und sortierte Schlüssel.
+3. Erreichbare Kindknoten, Baumgrenzen, zusammenhängende Fortsetzungsseiten und
+   die im Quellpaket angegebenen Datei- und Bytezählungen.
+4. Datensatz-, Geometrie- und Ebenenzählungen, eindeutige Anwendungs-IDs,
+   Geometriezuordnungen und vorhandene Orts-, Ereignis- und Beziehungszählungen.
+5. Koordinaten und Bounds der übernommenen Geometrien. Es findet keine neue
+   Geokodierung oder Erzeugung von Ersatzpunkten statt.
+
+Gzip-Dateien werden höchstens bis zur erlaubten entpackten Knotengröße gelesen.
+Ein neuer Stand entsteht zunächst in einem temporären Nachbarverzeichnis. Der
+bisherige Katalog bleibt während Download, Validierung und Ableitung erhalten.
+Erst nach erfolgreicher Prüfung wird das Verzeichnis ausgetauscht; scheitert
+das Einsetzen des neuen Verzeichnisses, wird das vorige zurückbenannt. Das ist
+ein lokaler Dateivorgang, kein Live-Update einer ausgelieferten Seite.
+
+~~~bash
+python3 scripts/import_unfallwerkbank.py \
+  --source-url https://carstenartur.github.io/Unfallatlas/data/ris/ \
+  --output-dir site/data/ris
+
+python3 scripts/import_unfallwerkbank.py --check --output-dir site/data/ris
+python3 scripts/snapshot_bundle.py pack
+~~~
+
+--source-dir /pfad/zum/quellpaket liest stattdessen lokale Dateien.
+--workers begrenzt parallele Dateizugriffe auf 1 bis 32; die Vorgabe ist 16.
+Der Import richtet sich an die veröffentlichte Unfallwerkbank und fragt keine
+amtlichen RIS-Server erneut ab. Es gibt keinen geplanten oder regelmäßigen Abruf.
+
+## Archiv und abgeleitete Dateien
+
+Das versionierte Archiv enthält den vollständigen auslieferbaren Bestand.
+Es liegt in vier Teilen `data/hannover-snapshot.tar.gz.part01` bis `part04`
+vor. `data/hannover-snapshot.parts.json` verzeichnet die Teile; die SHA-256-Datei
+prüft zusätzlich das gesamte Archiv. So bleiben sämtliche
+Originaldateien erhalten, ohne sie zusätzlich als Tausende einzelne Git-Dateien
+zu versionieren. Zum Starten, Testen oder Veröffentlichen wird das Archiv
+zunächst nach site/data/ris/ entpackt:
+
+~~~bash
+python3 scripts/snapshot_bundle.py unpack
+~~~
+
+Nach einer geprüften Datenaktualisierung erstellt pack das Archiv, seine Teile
+und die Prüfsummennachweise neu. Alle Teile und Nachweise müssen gemeinsam
+versioniert werden. Das ungeteilte Archiv bleibt ein lokales Zwischenprodukt.
+
+| Entpackte Datei | Inhalt und Integrität |
+|---|---|
+| hannover.json | Bytegleiches Originalmanifest; enthält Quellenstand, Warnungen, Rechte und Wurzeldeskriptoren |
+| hannover.&lt;sha256&gt;.&lt;kind&gt;.json.gz | Alle 6.905 referenzierten Originaldateien, bytegleich übernommen |
+| search-index.json.gz | Eine Zeile für jeden Vorgang, auch ohne Geometrie |
+| map.geojson.gz | Vorhandene Originalgeometrien mit zugeordneten Anwendungs-IDs |
+| migration.json | Importzeitpunkt, Herkunft, Manifestprüfsumme, Generation, Zählungen und Prüfsummen der Ableitungen |
+
+Der Suchindex enthält id, sourceId, title, number, date, type, source, level,
+body, mapped und locations. Originaldetails bleiben in den Quellpartitionen.
+Die Suchprojektion enthält keine neu erzeugten Zusammenfassungen oder
+zusätzlichen Volltexte.
+
+Die Anwendungs-ID ist quellenqualifiziert. 15 Landtagsvorgänge haben im
+Quellpaket ältere Kennungen ohne Quellenpräfix; für die Anwendung wird das
+Präfix ergänzt. sourceId und das Originalpaket behalten deren ursprüngliche
+Kennung. Gleiche Drucksachennummern aus verschiedenen Quellen bleiben separate
+Vorgänge. Suffixe und Originalverweise werden nicht vereinheitlicht.
+
+--check liest den installierten Bestand ohne Netz erneut vollständig ein,
+prüft die Originalstruktur und vergleicht die reproduzierten Such- und
+Kartenprojektionen mit den ausgelieferten Dateien. Der Importzeitpunkt wird
+dabei nicht als neuer Quellenprüfstand ausgegeben.
+
+## Browser, Suche und URLs
+
+AtlasData in site/data.js bietet die Methoden init(), search(params),
+getRecord(id) und getMap(). Der Suchworker filtert den vollständigen Index
+nach Suchbegriff, Quellenebenen, Jahresgrenzen und Ortsbezug. Die Oberfläche
+zeigt paginierte Ergebnisse; die Paginierung begrenzt den angezeigten Ausschnitt,
+nicht den durchsuchten Datenbestand.
+
+Details werden nach Bedarf aus den unveränderten Bäumen gelesen. Vor der
+Verwendung werden gzip-komprimierte Inhalte entpackt und ihre SHA-256-Prüfsummen
+kontrolliert. Quelle, Ortsbelege, vorhandene Ereignisse und Beziehungen werden
+aus den überlieferten Daten angezeigt. Fehlende Angaben werden nicht aus der
+Darstellung eines Kartensymbols oder aus einer politischen Ebene erschlossen.
+
+Die Ansicht verwendet Queryparameter, unter anderem q, ebenen, von, bis,
+verortet, vorgang, lat, lng, z, ansicht und seite. Dadurch funktionieren geteilte
+Links unter einem GitHub-Pages-Unterpfad ohne serverseitiges Routing. Suchbegriffe
+und gewählte Vorgänge sind Bestandteil der geteilten Adresse und beim Aufruf
+auch der Anfrage an den Hostinganbieter.
+
+Benötigt werden ein aktueller Browser mit ES-Modulen, Web Workers,
+DecompressionStream, Web Crypto und Dialogunterstützung sowie JavaScript.
+Bei lokaler Entwicklung genügt nach dem Entpacken ein HTTP-Server auf localhost:
+
+~~~bash
+python3 scripts/snapshot_bundle.py unpack
+python3 -m http.server --directory site 8000
+~~~
+
+## Darstellung und Datenflüsse
+
+Die gemeinsamen Farben, Abstände, lokale Inter-Schrift und Fokusrahmen kommen
+aus dem Ratsatlas-Kern. Die Rechercheoberfläche nutzt app.css; Datenschutz und
+404-Seite verwenden die vorhandenen Textseitenklassen aus style.css.
+
+Leaflet 1.9.4 liegt lokal. Die Hintergrundkarte lädt Rasterkacheln von
+https://tile.openstreetmap.org/. Das ist eine externe Verbindung: IP-Adresse,
+Kacheladresse und übliche HTTP-Anfragedaten erreichen den Kartenanbieter.
+Die Anwendung übermittelt dorthin keine Suchtexte oder Dokumentinhalte.
+
+Die Anwendung setzt keine Analysewerkzeuge, Werbetracker oder Cookies ein und
+schreibt nicht in localStorage oder sessionStorage. Der Browser kann
+geladene Dateien regulär zwischenspeichern und Rechercheadressen im Verlauf
+behalten. „Link kopieren“ nutzt nach Betätigung die Zwischenablage. Weitere
+Angaben stehen in [Datenschutz](site/datenschutz.html).
+
+Die CSP der Hauptseite erlaubt die lokalen Module und Worker sowie
+OpenStreetMap-Kachelbilder. Leaflet benötigt dynamische Stile; die Hauptseite
+erlaubt deshalb Inline-Stile. Die statischen Textseiten benötigen diese
+Erweiterung nicht. HTTP-Sicherheitskopfzeilen werden bei GitHub Pages durch das
+Hosting bestimmt; die alte Apache-.htaccess wird dort nicht ausgewertet.
+
+## GitHub Pages und CI
+
+Ziel ist die Projektadresse
+[https://carstenartur.github.io/ratsatlas-Hannover/](https://carstenartur.github.io/ratsatlas-Hannover/).
+Die normalen Asset- und Datenpfade sind relativ. Die 404-Seite benutzt dagegen
+den bekannten Projektwurzelpfad /ratsatlas-Hannover/, damit sie auch bei
+fehlerhaften verschachtelten Adressen ihre Gestaltung und Startseite findet.
+Canonical, Sitemap und robots.txt beziehen sich auf die Projektadresse.
+
+Der einzige aktive Workflow heißt **Prüfen und veröffentlichen**:
+
+| Ereignis | Ergebnis |
+|---|---|
+| Pull Request nach main | Archiv entpacken, JavaScript-Tests, Python-Tests und vollständige Offlineprüfung des Datenpakets |
+| Push auf main | Dieselben Prüfungen; danach Archiv im Deploymentjob entpacken, site/ hochladen und an GitHub Pages ausliefern |
+
+Die Prüfmaschine verwendet Node.js 24 und Python 3.12. Für die
+JavaScript-Funktionstests werden keine Projektabhängigkeiten installiert. Alle
+verwendeten Actions sind auf Commit-Hashes festgelegt. Schreibrechte für Pages
+und das OIDC-Token erhält nur der Deploymentjob. Es gibt keinen Plesk-Branch,
+keine IndexNow-Anfrage und keine Live-Prüfung des fremden Hauptportals.
+
+GitHub Pages muss im Repository auf **GitHub Actions** als Veröffentlichungsquelle
+gestellt sein. Ein vorbereiteter Workflow oder ein erfolgreicher PR-Test
+belegt noch kein Live-Deployment. Maßgeblich sind der erfolgreiche Pagesjob und
+die tatsächlich erreichbare Projektadresse nach der Zusammenführung.
+
+## Prüfungen und Grenzen
+
+~~~bash
+python3 scripts/snapshot_bundle.py unpack
+npm test
+python3 -m unittest discover -s tests -p 'test_*.py'
+python3 scripts/import_unfallwerkbank.py --check --output-dir site/data/ris
+~~~
+
+Die Tests und die Offlineprüfung ersetzen weder eine neue Prüfung amtlicher
+Inhalte noch eine manuelle Bewertung jeder Verortung. Die Angaben
+sourceVerifiedAt, builtAt und importedAt haben unterschiedliche Bedeutungen;
+die [Datenbeschreibung](docs/DATEN.md) hält sie auseinander.
+
+Das historische Portal-Prüfprotokoll pruefung.tsv und die früheren
+Bildschirmbilder in pruefung/ belegen ausschließlich den damaligen
+Portalstand. Aussagen zur Barrierefreiheit dieser neuen Anwendung benötigen
+eigene Prüfungen; der Fork übernimmt keine frühere WCAG-Abnahme.

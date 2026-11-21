@@ -1,0 +1,13 @@
+{
+  "name": "ratsatlas-hannover",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "test:browser": "node scripts/browser_smoke.mjs",
+    "check:data": "python3 scripts/import_unfallwerkbank.py --check --output-dir site/data/ris"
+  },
+  "devDependencies": {
+    "playwright": "1.62.1"
+  }
+}

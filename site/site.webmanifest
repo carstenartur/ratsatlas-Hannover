@@ -1,7 +1,7 @@
 {
-  "name": "Ratsatlas",
-  "short_name": "Ratsatlas",
-  "description": "Öffentliche Vorlagen aus kommunalen Ratsinformationssystemen auf Karte und Zeitleiste, mit Gremien, Ämtern und Quellen.",
+  "name": "Ratsatlas Hannover",
+  "short_name": "Ratsatlas H",
+  "description": "Öffentliche Vorgänge aus Stadt Hannover, Region Hannover und dem Land Niedersachsen recherchieren, mit Originalquellen und Karte.",
   "lang": "de",
   "start_url": "./",
   "scope": "./",
