@@ -137,7 +137,8 @@ npm run test:browser
 ~~~
 
 Der CI-Lauf bewahrt diese Bilder und den Prüfbericht als Artefakt
-`hannover-browser-qa` auf.
+`hannover-browser-qa` auf. Der [Prüfbericht vom 21.11.2026](docs/QA.md)
+enthält die erfolgreich geprüften Abläufe und Bildschirmbilder.
 
 Die Prüfungen laufen gegen lokale Daten und Testfälle. Sie prüfen unter anderem
 Suche, teilbare Ansichten, Datenzugriff und Importintegrität. Das alte

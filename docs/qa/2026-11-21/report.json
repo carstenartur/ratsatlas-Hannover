@@ -1,0 +1,22 @@
+{
+  "basePath": "/ratsatlas-Hannover/",
+  "assertions": [
+    "Complete dataset and all 3,395 source geometries under repository subpath",
+    "Rapid query/filter change; linked request/answer and original link",
+    "Highlighted geometry remains clickable; filtered-out popup closes",
+    "All 15 Landtag records, preserved original identity and shared filter URL",
+    "820px and 390px layouts, list/map switching, honest source and unlocated counts"
+  ],
+  "screenshots": [
+    "desktop.png",
+    "request-answer.png",
+    "location-evidence.png",
+    "tablet.png",
+    "mobile-list.png",
+    "mobile-map.png",
+    "sources.png"
+  ],
+  "pageErrors": [],
+  "consoleErrors": [],
+  "requestFailures": []
+}

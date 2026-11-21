@@ -62,9 +62,9 @@
 
 - [x] Replace upstream-specific deployment/metadata with repository-local checks and Pages deployment.
 - [x] Document actual data status, repeatable import, use cases, credits and limitations.
-- [ ] Run complete offline tests and desktop/mobile browser checks with screenshots.
-- [ ] Review the complete diff, address material findings, commit and open a focused PR.
-- [ ] Verify remote CI and report the precise delivered state and any deployment limitation.
+- [x] Run complete offline tests and desktop/mobile browser checks with screenshots.
+- [x] Review the complete diff, address material findings, commit and open a focused PR.
+- [x] Verify remote CI and report the precise delivered state and any deployment limitation.
 
 ## Verification recorded before remote CI
 
@@ -73,3 +73,11 @@
 - Reconstructing from four parts restored all 6,909 browser files byte-for-byte.
 - Independent review findings on rapid filters, stale popups, map clicks and original IDs are fixed.
 - Browser execution is delegated to GitHub Actions because this workspace cannot launch Chromium.
+
+## Browser verification
+
+- CI run 44876266802 passed on fcb9446fb251a9826dc769f4a087f2eaf6ec7a12.
+- The Chromium-only native-fetch receiver issue was reproduced, fixed and protected by the 18th JavaScript test.
+- All browser scenarios passed without page errors, console errors or failed requests; all seven screenshots were visually reviewed.
+- GitHub Pages is configured to use GitHub Actions; live deployment follows merge.
+- See `docs/QA.md` for preserved evidence.
